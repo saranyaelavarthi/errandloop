@@ -64,3 +64,23 @@ node scripts/browser-test.cjs
 ```
 
 The browser test resets the fictional board and modifies its demo data. Run it only against a disposable local demo. It resets the board again when it finishes successfully.
+
+
+## Hosted deployment preparation
+
+The additional HTTP API v2 entry point serves the browser UI and enforces a
+generated demo access code with signed, expiring secure cookies. Total Python
+tests: **40 passed**. Hosted tests cover unauthenticated denial, invalid codes,
+cookie tampering, expiry, code rotation, cross-origin writes, a complete
+three-person exchange, shared reset, logout, and invalid request bodies.
+
+`cfn-lint template.yaml infra/hosted.json` passed. JavaScript syntax checks passed
+for both app and login scripts. A 4.8 MB deployment ZIP was built with the native
+Linux CPython 3.12 Cedar wheel; its extracted hosted entry point and Cedar imports
+loaded successfully. The package excludes repository history and deployment
+credentials.
+
+No AWS deployment, hosted browser session, or live cloud smoke test has been
+performed. `scripts/deploy_aws.py` performs those live HTTP checks only when run
+inside an authenticated AWS environment. AWS console navigation was unavailable
+from the authoring session. See DEPLOY-AWS.md for the exact continuation.

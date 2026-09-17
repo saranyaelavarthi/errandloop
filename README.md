@@ -67,6 +67,10 @@ The local app runs the **AWS-originated open-source Cedar policy engine**, throu
 
 The matcher proposes possibilities; it cannot impersonate participants or grant consent. AI is not needed to solve this matching problem. The product intentionally avoids unnecessary agent calls and fabricated model outputs.
 
+## Deploy the full app with a URL
+
+The hosted option includes the browser interface, secure demo-code sign-in, Cedar, and DynamoDB. Run the deployment script from an authenticated AWS CloudShell; it verifies the live app before printing its URL. See [the complete deployment steps](docs/DEPLOY-AWS.md). Deployment is prepared and tested locally; no AWS resources have been created by this authoring session.
+
 ## Optional AWS cloud backend
 
 `template.yaml` packages the same service for **Lambda + API Gateway + DynamoDB**. The API requires **AWS IAM / SigV4**. It is a restricted hackathon backend, not a finished public multi-user service. The browser app runs against the local Python server; cloud API requests are exercised with the included signed client. No AWS deployment has been performed in this workspace.

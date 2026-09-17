@@ -10,3 +10,5 @@ samconfig.toml
 node_modules/
 test-results/
 *.bundle
+.deploy-venv/
+.errandloop-deployment.json

@@ -15,8 +15,8 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
-      - run: node --check app/static/app.js
-      - run: cfn-lint template.yaml
+      - run: node --check app/static/app.js && node --check app/static/login.js
+      - run: cfn-lint template.yaml infra/hosted.json
         env:
           AWS_DEFAULT_REGION: ap-south-1
           AWS_EC2_METADATA_DISABLED: 'true'

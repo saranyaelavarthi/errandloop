@@ -31,6 +31,7 @@ function notify(message){const el=$('#toast');el.textContent=message;el.hidden=f
 async function api(path, data){
   const response=await fetch(path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json','X-Demo-Member':actor},body:data?JSON.stringify(data):undefined});
   const result=await response.json();
+  if(response.status===401){window.location.reload();throw new Error(result.error);}
   if(!response.ok){const error=new Error(result.error||'Something went wrong. Please try again.');error.status=response.status;throw error;}
   return result;
 }
@@ -41,7 +42,7 @@ async function refresh(force=false){
     state=next;connected=true;$('#connection').hidden=true;
     if(changed||force){render();if(dialogState?.kind==='loop')showLoop(dialogState.id,false);}
   }catch(error){
-    connected=false;$('#connection').textContent='The local server is unavailable. Your saved board is preserved. Restart it and refresh this page.';$('#connection').hidden=false;
+    connected=false;$('#connection').textContent='The server is unavailable. Your saved board is preserved. Try refreshing in a moment.';$('#connection').hidden=false;
     if(!state)$('#app').innerHTML=`<div class="empty"><h3>We couldn’t open the board.</h3><p>Make sure ErrandLoop is running, then try again.</p><button class="button primary" data-action="refresh">Try again</button></div>`;
   }
 }
@@ -164,10 +165,12 @@ function showForm(type){
     <label class="field full">${type==='trip'?'Space I can offer':'Space this needs'}<select name="${type==='trip'?'capacity':'units'}">${[1,2,3,4,5].map(n=>`<option value="${n}">${n} small item${n>1?'s':''}</option>`).join('')}</select><small>Think a paperback, document envelope, or small prepared package per space.</small></label><label class="field full">A note for your neighbour<textarea name="note" maxlength="180" placeholder="Collection details, item size, or anything useful."></textarea></label></div><div class="actions"><button class="button primary full" type="submit">Post ${type==='trip'?'my trip':'my request'} ${icon('arrow')}</button></div><p class="guide-sub">One active trip and one active request per person. Exact existing destinations only; no detours.</p></form>`, 'form',type);
 }
 function guide(){openModal('A favour comes full circle.','The 2-minute walkthrough',
-  `<p>ErrandLoop looks for exchanges among trips people already planned. Each person helps a neighbour and receives help from the next.</p><div class="step"><span class="step-num">1</span><div><p><strong>Start in Sana’s demo seat.</strong></p><small>Sana appears as “You” in this seat. Her grocery trip and printout request are already posted.</small></div></div><div class="step"><span class="step-num">2</span><div><p><strong>Review and propose the suggested circle.</strong></p><small>You collect Ravi’s coffee. Asha collects your printout. Ravi collects Asha’s book.</small></div></div><div class="step"><span class="step-num">3</span><div><p><strong>Take Asha’s seat, then Ravi’s.</strong></p><small>Use the demo switcher. Both must accept their own part before the circle activates.</small></div></div><div class="step"><span class="step-num">4</span><div><p><strong>Collect, hand over, and close the circle.</strong></p><small>Only the collector marks an item collected. Only its receiver confirms receipt. Try cancelling before and after collection.</small></div></div><div class="callout guide-sub">For a blank start, take Kabir’s seat and post your own trip and request. “Start fresh” restores the fictional board with new future times.</div><p class="guide-sub">This is a local, single-group demo. Switching seats is a demonstration feature, not a real sign-in system. No money changes hands in the app, and no live location is tracked.</p><div class="actions"><button class="button primary full" data-action="close">Let’s find a circle ${icon('arrow')}</button></div>`, 'guide');}
+  `<p>ErrandLoop looks for exchanges among trips people already planned. Each person helps a neighbour and receives help from the next.</p><div class="step"><span class="step-num">1</span><div><p><strong>Start in Sana’s demo seat.</strong></p><small>Sana appears as “You” in this seat. Her grocery trip and printout request are already posted.</small></div></div><div class="step"><span class="step-num">2</span><div><p><strong>Review and propose the suggested circle.</strong></p><small>You collect Ravi’s coffee. Asha collects your printout. Ravi collects Asha’s book.</small></div></div><div class="step"><span class="step-num">3</span><div><p><strong>Take Asha’s seat, then Ravi’s.</strong></p><small>Use the demo switcher. Both must accept their own part before the circle activates.</small></div></div><div class="step"><span class="step-num">4</span><div><p><strong>Collect, hand over, and close the circle.</strong></p><small>Only the collector marks an item collected. Only its receiver confirms receipt. Try cancelling before and after collection.</small></div></div><div class="callout guide-sub">For a blank start, take Kabir’s seat and post your own trip and request. “Start fresh” restores the fictional board with new future times.</div><p class="guide-sub">This is a single-group demo. Switching seats is a demonstration feature, not a real sign-in system. No money changes hands in the app, and no live location is tracked.</p><div class="actions"><button class="button primary full" data-action="close">Let’s find a circle ${icon('arrow')}</button></div>`, 'guide');}
 
 document.addEventListener('click', async event=>{
   const button=event.target.closest('button');if(!button||button.disabled)return;
+  if(button.dataset.action==='sign-out'){await api('/api/logout',{});window.location.reload();return;}
+  if(!state&&button.dataset.action!=='guide'&&button.dataset.action!=='close'&&button.dataset.action!=='refresh')return;
   if(button.dataset.view){currentView=button.dataset.view;render();return;}
   if(button.dataset.tab){boardTab=button.dataset.tab;render();return;}
   const {action,id}=button.dataset;
@@ -191,7 +194,7 @@ document.addEventListener('click', async event=>{
   else if(action==='switch'){
     actor=button.dataset.member;localStorage.setItem('errandloop-actor',actor);await refresh(true);showLoop(button.dataset.loop);notify(`You’re now playing ${member(actor).name}.`);
   }
-  else if(action==='reset-prompt')openModal('A fresh board?','Reset the demo','<p>This clears this computer’s demo posts, circles, and activity, then restores the sample group with fresh times.</p><div class="actions"><button class="button danger" data-action="reset">Reset the demo</button><button class="button" data-action="close">Keep the board</button></div>','reset');
+  else if(action==='reset-prompt')openModal('A fresh board?','Reset the demo','<p>This clears the shared demo board’s posts, circles, and activity, then restores the sample group with fresh times.</p><div class="actions"><button class="button danger" data-action="reset">Reset the demo</button><button class="button" data-action="close">Keep the board</button></div>','reset');
   else if(action==='reset'){
     try{state=await api('/api/reset',{});actor='you';localStorage.setItem('errandloop-actor',actor);currentView='board';destination='all';boardTab='trips';closeModal();await refresh(true);notify('Fresh board, fresh opportunities.');}catch(e){notify(e.message);}
   }
