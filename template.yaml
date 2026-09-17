@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ErrandLoop - IAM-protected small-group hackathon backend
+Resources:
+  Board:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: demo
+      Auth:
+        DefaultAuthorizer: AWS_IAM
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingBurstLimit: 10
+          ThrottlingRateLimit: 5
+  Backend:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.lambda_handler.handler
+      Runtime: python3.12
+      Architectures: [x86_64]
+      Timeout: 15
+      MemorySize: 512
+      ReservedConcurrentExecutions: 2
+      Environment:
+        Variables:
+          ERRANDLOOP_TABLE: !Ref Board
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: !GetAtt Board.Arn
+      Events:
+        Proxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /api/{proxy+}
+            Method: ANY
+Outputs:
+  ApiUrl:
+    Description: Sign requests with AWS SigV4; this is not an anonymous public endpoint.
+    Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com/demo/api/board'

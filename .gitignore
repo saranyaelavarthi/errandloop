@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.sqlite3
+*.sqlite3-*
+.aws-sam/
+samconfig.toml
+.env
+node_modules/
+test-results/
+*.bundle

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183f35">
+  <meta name="description" content="Turn the trips you are already making into a circle of small favours.">
+  <title>ErrandLoop — Going anyway?</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to board</a>
+  <div class="demo-strip"><span>A little campus experiment. <strong>Fictional people, working exchanges.</strong></span><button data-action="guide">How to try it <span aria-hidden="true">↗</span></button></div>
+  <header class="topbar">
+    <a href="#board" class="brand" aria-label="ErrandLoop home"><span class="brand-mark" aria-hidden="true">↗<span>↙</span></span>errand<span>loop</span></a>
+    <nav aria-label="Main navigation"><button class="nav-button active" data-view="board">The board</button><button class="nav-button" data-view="loops">My circles <span id="loop-count">0</span></button><button class="nav-button" data-view="activity">Activity</button></nav>
+    <label class="identity"><span>Demo seat</span><select id="actor" aria-label="Choose a fictional participant"><option value="you">Sana</option></select></label>
+  </header>
+  <main id="main" tabindex="-1">
+    <div id="connection" class="connection" role="status" hidden></div>
+    <div id="app"><div class="loading"><span class="spinner"></span>Getting the board ready…</div></div>
+  </main>
+  <footer><span>Small favours. Full circles.</span><span>The Courtyard · Local demo <button data-action="reset-prompt">Start fresh</button></span></footer>
+  <dialog id="modal" aria-labelledby="dialog-title"><div id="modal-content"></div></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

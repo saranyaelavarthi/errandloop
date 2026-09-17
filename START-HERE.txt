@@ -1,0 +1,26 @@
+ERRANDLOOP
+Going anyway?
+
+1. Extract this entire ZIP into a folder on your computer.
+2. Install Python 3.12 if you do not have it. On Windows, enable "Add Python to PATH".
+3. Windows: double-click start.bat.
+   Mac/Linux/Git Bash: run bash start.sh from this folder.
+4. The app opens at http://127.0.0.1:8000.
+5. Click "How to try it" for a guided demonstration.
+
+The first setup downloads the Cedar Python binding. Afterwards the local
+app runs without internet, an AWS account, or a payment card.
+
+Use Sana's demo seat first. You can switch fictional participants to try
+acceptance and handovers. Use "Start fresh" to reset the sample board.
+
+Included:
+- Complete source and the first Git commit, titled "hackathon".
+- Desktop, mobile, and circle screenshots in docs/.
+- A three-minute demo pitch in docs/PITCH.md.
+- Architecture, testing evidence, and AWS deployment instructions.
+
+The AWS template is included and linted, but has not been deployed.
+This is a working fictional-group prototype, not a public production service.
+
+Read README.md for details. Press Ctrl+C in the server window to stop.
