@@ -176,3 +176,23 @@ def test_lambda_live_entry_uses_signed_cookie_identity(app, monkeypatch):
     assert 'accounts' not in result
     event['cookies'] = []
     assert live_handler.handler(event, None)['statusCode'] == 401
+
+
+def test_assets_and_live_labels_ignore_windows_default_encoding(app, monkeypatch):
+    from pathlib import Path
+    original = Path.read_text
+    def windows_read(path, encoding=None, errors=None):
+        return original(path, encoding=encoding or 'cp1252', errors=errors)
+    monkeypatch.setattr(Path, 'read_text', windows_read)
+    cookie, _ = register(app)
+    html = app('/', cookie=cookie)['body']
+    assert 'ErrandLoop — Going anyway?' in html
+    assert 'Getting the board ready…' in html
+    assert 'Your group' in html and 'Sign out' in html
+    assert 'Local demo' not in html and 'Start fresh' not in html
+    for path in ['/app.js', '/onboarding.js', '/boot.js', '/style.css']:
+        result = app(path)
+        assert result['statusCode'] == 200
+        assert 'charset=utf-8' in result['headers']['Content-Type']
+        expected = (Path('app/static') / path[1:]).read_bytes().decode('utf-8')
+        assert result['body'] == expected

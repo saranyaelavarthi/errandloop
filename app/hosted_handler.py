@@ -20,6 +20,7 @@ from .store import DynamoStore
 
 STATIC = Path(__file__).with_name('static')
 ASSETS = {
+    '/boot.js': ('boot.js', 'text/javascript'),
     '/app.js': ('app.js', 'text/javascript'),
     '/style.css': ('style.css', 'text/css'),
     '/favicon.svg': ('favicon.svg', 'image/svg+xml'),
@@ -70,12 +71,12 @@ def handler(event, context):
     admitted = authenticated(event, key, now)
     if method == 'GET':
         if path in ('/', '/index.html'):
-            html = (STATIC / ('index.html' if admitted else 'login.html')).read_text()
+            html = (STATIC / ('index.html' if admitted else 'login.html')).read_text(encoding="utf-8")
             html = html.replace('Local demo', 'Hosted demo <button data-action="sign-out">Sign out</button>')
             return response(200, html, 'text/html')
         if path in ASSETS:
             filename, content_type = ASSETS[path]
-            return response(200, (STATIC / filename).read_text(), content_type)
+            return response(200, (STATIC / filename).read_text(encoding="utf-8"), content_type)
         if path == '/api/health':
             return response(200, {'ok': True, 'policyEngine': 'Cedar', 'mode': 'protected-hosted-demo'})
     if method not in ('GET', 'POST'):

@@ -2,7 +2,7 @@
 from pathlib import Path
 import cedarpy
 
-POLICIES = cedarpy.PolicySet.from_str(Path(__file__).with_name('policies.cedar').read_text())
+POLICIES = cedarpy.PolicySet.from_str(Path(__file__).with_name('policies.cedar').read_text(encoding="utf-8"))
 
 
 def ref(kind, uid):

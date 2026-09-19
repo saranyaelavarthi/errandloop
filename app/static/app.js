@@ -30,7 +30,7 @@ const pill=status=>`<span class="pill ${esc(status)}">${esc(statusNames[status]|
 
 function notify(message){const el=$('#toast');el.textContent=message;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,4500);}
 async function api(path, data){
-  const response=await fetch(path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json','X-Demo-Member':actor},body:data?JSON.stringify(data):undefined});
+  const response=await fetch(path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json','X-Demo-Member':actor},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(15000)});
   const result=await response.json();
   if(response.status===401){window.location.reload();throw new Error(result.error);}
   if(!response.ok){const error=new Error(result.error||'Something went wrong. Please try again.');error.status=response.status;throw error;}

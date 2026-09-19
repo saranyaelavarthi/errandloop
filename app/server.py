@@ -14,7 +14,7 @@ from .http_api import handle, SECURITY_HEADERS
 
 STATIC = Path(__file__).with_name('static')
 ASSETS = {'/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js',
-          '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.json': 'manifest.json'}
+          '/boot.js': 'boot.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.json': 'manifest.json'}
 
 
 def main():
@@ -66,7 +66,8 @@ def main():
             path = urlsplit(self.path).path
             if path in ASSETS:
                 file = STATIC / ASSETS[path]
-                self.send(200, file.read_bytes(), mimetypes.guess_type(file.name)[0] or 'application/octet-stream')
+                mime = {'.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml', '.json': 'application/json'}[file.suffix]
+                self.send(200, file.read_bytes(), mime + '; charset=utf-8')
             else:
                 self.send(*handle(store, 'GET', path, self.headers.get('X-Demo-Member', 'you')))
 

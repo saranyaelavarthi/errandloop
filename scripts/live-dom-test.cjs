@@ -34,6 +34,7 @@ async function page(client, script){
   const dom=new JSDOM(html,{url:base,runScripts:'outside-only',virtualConsole});
   windows.push(dom.window);
   dom.window.fetch=client.request.bind(client);
+  dom.window.AbortSignal=AbortSignal;
   dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
   const code=fs.readFileSync('app/static/'+script,'utf8');
@@ -158,6 +159,12 @@ function submit(window,id,fields){
   }
   const complete=await page(alice,'app.js');
   assert.match(complete.document.querySelector('.progress-counts').textContent,/5receiver-confirmed handovers2completed circles/);
+  const failed=await page(alice,'app.js');
+  failed.document.querySelector('#app').innerHTML='<div class="loading">Loading</div>';
+  failed.eval(fs.readFileSync('app/static/boot.js','utf8'));
+  failed.dispatchEvent(new failed.Event('error'));
+  assert.equal(failed.document.querySelector('#app .loading'),null);
+  assert.match(failed.document.querySelector('#app').textContent,/The board could not start/);
   assert.deepEqual(errors,[]);
   console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location, match explanation, mutual consent, collection, recipient-only receipt, completed metrics, live guide, first-use checklist, three-person-only circle, cancellation after pickup, preserved handovers and recovery to completion.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{

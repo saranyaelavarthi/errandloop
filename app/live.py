@@ -78,7 +78,7 @@ def identity(headers, key, secure):
 
 
 def app_html():
-    html = (STATIC / 'index.html').read_text().replace('<body>', '<body data-mode="live">')
+    html = (STATIC / 'index.html').read_text(encoding="utf-8").replace('<body>', '<body data-mode="live">')
     html = html.replace('A little campus experiment. <strong>Fictional people, working exchanges.</strong>', 'Your neighbourhood. <strong>Real plans, shared favours.</strong>')
     html = html.replace('Demo seat', 'Signed in as').replace('Choose a fictional participant', 'Your account')
     html = html.replace('The Courtyard · Local demo <button data-action="reset-prompt">Start fresh</button>', '<button data-action="group">Your group</button> <button data-action="sign-out">Sign out</button>')
@@ -92,10 +92,10 @@ def dispatch(store, key, method, path, headers, raw='', origin='', secure=True):
     who = identity(headers, key, secure)
     if method == 'GET':
         if path in ('/', '/index.html'):
-            return response(200, app_html() if who else (STATIC / 'onboarding.html').read_text(), 'text/html')
+            return response(200, app_html() if who else (STATIC / 'onboarding.html').read_text(encoding="utf-8"), 'text/html')
         if path in ASSETS:
             filename, mime = ASSETS[path]
-            return response(200, (STATIC / filename).read_text(), mime)
+            return response(200, (STATIC / filename).read_text(encoding="utf-8"), mime)
         if path == '/api/health':
             return response(200, {'ok': True, 'policyEngine': 'Cedar', 'mode': 'live-groups'})
     if method not in ('GET', 'POST'):
