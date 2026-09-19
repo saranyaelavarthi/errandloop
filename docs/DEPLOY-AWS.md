@@ -7,7 +7,7 @@ The older `template.yaml` remains a separate IAM-authenticated API-only option.
 **Status:** the hosted implementation is tested locally. No AWS stack has been
 created by the project authoring session: no AWS credentials were connected,
 and AWS's console could not be reached from that session's browser. The script
-prints a **verified app URL** only after an actual deployment and live checks.
+prints a **verified app URL** only after an actual deployment and live HTTP checks.
 
 ## Run from your AWS CloudShell
 
@@ -33,30 +33,33 @@ deployment. A failed run reports the failing stack/resource reason.
 
 The script creates `errandloop-demo-artifacts` and `errandloop-demo`. It refuses
 to update existing stacks without the `Project=ErrandLoop` tag. Successful runs
-check the sign-in page, secure session, persisted board, matching, and unlocked
-interface before printing the URL. It does not create artificial real-world
-impact records. Your board starts with fictional sample people.
+check public onboarding, Cedar health, and the authentication gate before printing the URL. It does not create artificial real-world
+impact records. New groups start empty, using the names and places their owners enter.
 
-## Demo access
+## Accounts and server sessions
 
-A random access code is generated locally and printed only in your terminal
-after verification. It is also saved in `.errandloop-deployment.json` with owner
-read/write permissions. **Do not commit or share that file.** The deployment
-parameter contains only a SHA-256 digest marked `NoEcho`. Treat the digest as
-sensitive too because it signs demo cookies. Runtime requests and access codes
-are not logged by the app.
+The URL opens a public **Create / Join / Sign in** screen. There is no shared
+login code and no sample data. Every person creates their own password-protected
+account. Group owners choose their pickup locations and handover point, then
+invite neighbours using the random group code shown in **Your group**.
 
-Share the app URL and demo code with judges through your chosen private channel.
-Everyone with the code shares one board and can switch fictional seats or reset
-that board. Cookies expire after 12 hours and are Secure, HttpOnly, and
-SameSite=Strict. This is access control for a supervised hackathon demonstration,
-not individual resident authentication. Do not enter real addresses, personal
-pickup details, or use this to coordinate real strangers.
+The deployment script generates a private server signing secret. It saves it in
+`.errandloop-deployment.json` with owner read/write permissions, outside Git, and
+passes its digest as the masked `AccessHash` CloudFormation parameter. Despite the
+legacy parameter name, this is a server signing key, not a user login password.
+Do not share the deployment file. Reusing it preserves existing sessions across
+redeployments; removing it before redeployment rotates the server key and logs
+all users out without deleting their accounts.
 
-Repeated deployments from the same checkout reuse the saved code. To rotate it,
-remove only `.errandloop-deployment.json` and redeploy; all old cookies will then
-be invalid. Sign out clears this browser's cookie; a copied cookie remains valid
-until expiry or code rotation.
+Cookies expire after 12 hours and are Secure, HttpOnly, and SameSite=Strict.
+Accounts have salted scrypt hashes and a temporary lockout after five incorrect
+password attempts. Session identity determines both group and member; client actor
+headers cannot impersonate another member. There is no password recovery, member
+removal, invitation rotation, or identity verification in this initial version.
+
+The deployment smoke check verifies onboarding assets, Cedar health, and rejection
+of unauthenticated board requests. Real multi-account exchanges are covered by
+local integration tests; no live cloud user-flow test has run in this environment.
 
 ## Cost and cleanup
 

@@ -2,133 +2,128 @@
 
 **Going anyway? Turn your next trip into a circle of small favours.**
 
-ErrandLoop is a working, local-first hackathon prototype for a hostel or apartment group. It finds reciprocal exchanges among trips people already intend to make. Asha collects your printout; you collect Ravi's prepared order; Ravi collects Asha's reserved book. Each person helps once and receives help once.
+ErrandLoop helps a small group exchange pickups on trips they already plan to
+make. Each person helps once and receives help once. The default app now starts
+with **your own account and an empty group** — no fictional people, seeded posts,
+or impersonation switcher.
 
-![ErrandLoop community board](docs/desktop.png)
+## Run locally on Windows
 
-## Run it
-
-Install **Python 3.12**. Download and extract this project first.
-
-**Windows:** double-click `start.bat`. It creates an isolated environment, installs the one runtime dependency, starts the server, and opens the app.
-
-**macOS / Linux / Git Bash:**
+Python 3.12 is required. In Git Bash:
 
 ```bash
-bash start.sh
-```
-
-Manual setup (all platforms):
-
-```bash
+cd ~/errandloop
+git pull --ff-only
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m app.server --open
+./.venv/Scripts/python.exe -m pip install -r requirements.txt
+./.venv/Scripts/python.exe -m app.server --open
 ```
 
-Open **http://127.0.0.1:8000**. The initial package installation needs internet; normal local use does not. There is no AWS account, card, API key, LLM, map service, or paid API required for the local demo. Data is stored in `errandloop.sqlite3`, outside Git. Use `--port 8001` if port 8000 is occupied.
+Stop an already running server with Ctrl+C before restarting it. If environment
+creation was interrupted, recreate only its disposable packages using
+`python -m venv --clear .venv`. Let setup finish before starting the server.
+Windows users can also double-click `start.bat`. macOS/Linux: `bash start.sh`.
+Open http://127.0.0.1:8000 and keep the terminal running.
 
-## Try the full story
+## Use your own data
 
-1. Start in the **Sana** demo seat (shown as “You” on the board). Your existing grocery trip and printout request are seeded.
-2. Select **Review this circle**, inspect the three handovers, then **I'm in — propose this circle**.
-3. Use **Continue as Asha** and accept. Repeat as **Ravi**. The circle only activates after all three have accepted.
-4. Each collector marks their assigned item collected. Switch to each receiver to confirm receipt. All three confirmations close the circle.
-5. Reset the demo. Repeat, but cancel before collection: the remaining posts return to the board. Cancel after collection: goods stay assigned and a handover warning appears.
-6. Take **Kabir's** seat to add a new trip and request. Use Central Library for the trip and Corner Store for the request, with compatible times, to create a new exchange opportunity.
+1. **Create a group:** name your building/group, specify a shared handover point,
+   and enter at least two actual shops or pickup locations.
+2. Create your username and password. The board starts empty with only you.
+3. Open **Your group**, copy its group code, and share it privately with people
+   you know. They use **Join a group** and make their own accounts.
+4. Post where you are going and what you need collected. Group owners can add
+   more pickup locations from **Your group**.
+5. When at least two people have compatible trips and requests, a circle appears.
+   Everyone must accept from their own account. Each collector marks collection;
+   each recipient confirms their own receipt.
 
-All people and pickups are fictional. **Demo seat switching is deliberate simulation, not user authentication.** Do not expose the local server publicly or use it to coordinate real strangers.
+For example, if you are going to Shop A and need an item from Shop B, a neighbour
+already going to Shop B who needs something from Shop A can form a two-person
+exchange. Both people must post a trip and a request with compatible times and
+capacity. No artificial matches are inserted.
 
-## What actually works
+Locally, all accounts must use the same running server. To test two independent
+accounts on one computer, use a normal browser window and an incognito window.
+A group code cannot connect separate local servers. A public deployment supplies
+one HTTPS URL that everyone's device can reach.
 
-- Create and remove trips and prepared pickup requests, with one active post of each kind per person.
-- Match exact existing destinations, ready times, return deadlines, and item-space limits.
-- Enumerate directed cycles of 2–4 people and select a globally optimal disjoint set for the stated objective on the bounded group.
-- Explain unmatched requests; show other feasible cycles as alternatives.
-- Reserve a proposed circle atomically, collect individual consent, and expire unaccepted circles.
-- Track collector confirmation separately from recipient confirmation.
-- Recover from cancellation without silently rematching items already collected.
-- Persist the board across reloads, refresh other browser tabs, and reject stale or simultaneous conflicting writes.
-- Export an honest activity record; support desktop and mobile layouts with keyboard-accessible dialogs.
+## Public AWS deployment
 
-The algorithm optimizes **number of requests matched**, then **total scheduled return time**, with stable tie-breaking. It is not a geographic route optimizer. A “potential trip avoided” assumes a separate pickup trip for each matched request; actual savings have not been measured.
+[Deployment instructions](docs/DEPLOY-AWS.md) use API Gateway HTTP API, Lambda,
+DynamoDB, and a private S3 deployment-artifact bucket. The interface and API share
+one URL. The Lambda handler is `app.live_handler.handler`.
 
-## AWS is part of the working implementation
-
-The local app runs the **AWS-originated open-source Cedar policy engine**, through the independently maintained `cedarpy` Python binding. `app/policies.cedar` enforces ownership and participation at every mutation:
-
-- Only a circle participant can accept, decline, or cancel their circle.
-- Only the assigned collector can mark an item collected.
-- Only the recipient can confirm receipt.
-- Only the owner can remove a post.
-- Unspecified actions are denied by default.
-
-The matcher proposes possibilities; it cannot impersonate participants or grant consent. AI is not needed to solve this matching problem. The product intentionally avoids unnecessary agent calls and fabricated model outputs.
-
-## Deploy the full app with a URL
-
-The hosted option includes the browser interface, secure demo-code sign-in, Cedar, and DynamoDB. Run the deployment script from an authenticated AWS CloudShell; it verifies the live app before printing its URL. See [the complete deployment steps](docs/DEPLOY-AWS.md). Deployment is prepared and tested locally; no AWS resources have been created by this authoring session.
-
-## Optional AWS cloud backend
-
-`template.yaml` packages the same service for **Lambda + API Gateway + DynamoDB**. The API requires **AWS IAM / SigV4**. It is a restricted hackathon backend, not a finished public multi-user service. The browser app runs against the local Python server; cloud API requests are exercised with the included signed client. No AWS deployment has been performed in this workspace.
-
-With AWS SAM CLI, Docker for the build, an authenticated AWS profile, and permissions to create the resources:
+In your authenticated **AWS CloudShell**, not Windows Git Bash:
 
 ```bash
-sam validate --lint
-sam build --use-container
-sam deploy --guided
+git clone https://github.com/saranyaelavarthi/errandloop.git
+cd errandloop
+python3 scripts/deploy_aws.py --region ap-south-1
 ```
 
-Install `boto3` for the signed test client, then use the `ApiUrl` output:
+For an existing clone, run `git pull --ff-only` instead of cloning again. The
+script prints the URL only after deployment and live HTTP checks. No AWS account
+was authenticated in the authoring environment, so no deployment or URL is
+claimed. AWS charges may apply; expired credits do not prevent charges.
 
-```bash
-python -m pip install boto3==1.43.96
-python scripts/aws_request.py YOUR_API_URL --region ap-south-1
-```
+## Authentication and isolation
 
-The caller needs `execute-api:Invoke` for the deployed API. A successful stack deployment alone does not grant that caller permission. The API's demo actors are selected by an IAM-authorized demonstrator. The template restricts the Lambda role to GetItem/PutItem on its own table. DynamoDB uses consistent reads and conditional writes to reject racing reservations. The small group's state is deliberately one bounded aggregate; migrate to a normalized model before expanding beyond this prototype. Cloud deployment can incur AWS charges. Remove a test stack using `sam delete` when finished.
+- Accounts use salted scrypt password hashes; plaintext passwords are not stored.
+- Signed sessions identify the real member and group. Demo actor headers are
+  ignored. Hosted cookies are Secure, HttpOnly, SameSite=Strict, and expire after
+  12 hours. Local HTTP cookies omit Secure so localhost works.
+- Group invitations use random 128-bit codes. A code grants permission to join;
+  share it only with intended neighbours. Keep it for later sign-in.
+- Five incorrect password attempts lock that account for 15 minutes.
+- AWS Cedar enforces group, post ownership, circle participation, and the assigned
+  collector/recipient. The AWS-originated engine runs through the independently
+  maintained `cedarpy` binding.
+- SQLite transactions or DynamoDB conditional writes prevent conflicting updates.
+  Each group is stored separately. Credentials never appear in board responses.
 
-## Tests
+This is a first working small-group release: at most 16 members and 20 locations
+per group. Password recovery, invitation rotation, member removal, moderation,
+and email verification are not implemented. Names are self-reported, not verified
+identities. Sign-out clears this browser's cookie; stolen cookies remain valid
+until expiry or server-key rotation. Use people you know and arrange legitimate,
+prepared, paid-for pickups. There are no payments or live-location tracking.
+
+## Matching and durability
+
+The exact solver enumerates directed cycles of 2–4 members and selects disjoint
+circles maximizing matched requests, then minimizing scheduled return times.
+It checks exact shared destinations, ready times, deadlines, and bag capacity.
+It is not a map-based routing service. Potential trips avoided are estimates,
+not measured impact.
+
+Each proposal reserves its posts and expires if participants do not all accept.
+Cancellation before collection releases the other available posts. Cancellation
+after collection preserves assigned handovers and prevents duplicate pickups.
+The application persists after restarts and rejects stale updates.
+
+Local groups and session keys live in `errandloop-groups.sqlite3` (excluded from
+Git). The older fictional sample board is isolated in `errandloop.sqlite3` and is
+available only with `python -m app.server --demo --open`. It cannot be used to
+impersonate users of the live-group app. The older IAM API and protected demo
+handler remain reference/test modes; the hosted deployment uses the live handler.
+
+## Tests and originality
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-Tests cover constraint violations, exact packing against an independent brute-force oracle, Cedar denials, consent, expiry, cancellation recovery, recipient-only handover confirmation, idempotency, persistence rollback, and simultaneous reservations. Browser QA uses Playwright; see `docs/VALIDATION.md` and `scripts/browser-test.cjs`.
+Tests cover the exact matcher, group isolation, account creation/login, actor
+spoofing, cookie tampering, consent, collection, handovers, cancellation,
+persistence, and concurrent reservations. See [validation](docs/VALIDATION.md).
 
-## Project map
+Source and visual design were authored for this project with AI assistance.
+Errand sharing and cycle matching are established ideas; no first-ever novelty,
+real-user research, or measured impact is claimed. Follow hackathon disclosure
+rules. Original code is MIT-licensed; dependencies retain their own licenses.
 
-```text
-app/matching.py        directed-cycle enumeration and disjoint packing
-app/service.py         validation and state transitions
-app/policies.cedar     enforceable authorization rules
-app/auth.py            Cedar engine integration
-app/store.py           SQLite transactions / DynamoDB conditional writes
-app/server.py          local HTTP server and UI assets
-app/lambda_handler.py  IAM-protected Lambda entrypoint
-app/static/            original HTML, CSS, and browser interactions
-tests/                 meaningful domain and adapter checks
-docs/                  architecture, pitch, validation, and screenshots
-```
-
-## Originality and scope
-
-Errand sharing, reciprocal exchange, directed graphs, and cycle packing are established concepts. The application source, visual design, and scenario were authored for this project; no existing app repository was copied. The contribution is their specific integration into a small-group workflow with explicit consent, capacity/time constraints, and recoverable handovers. This is not a claim of patent novelty or first-ever invention.
-
-Development was AI-assisted. Review and understand the code and follow the hackathon's disclosure rules. No user interviews, real deployments, or real-world impact numbers are claimed.
-
-Before a real pilot: verify the need with hostel residents, implement authenticated group membership and invitations, arrange legitimate third-party collection permissions, add abuse/reporting controls, and establish practical handover rules. Payments, live location, identity verification, and messaging providers are deliberately outside this demo.
-
-## Credits
-
-- [Cedar policy engine](https://github.com/cedar-policy/cedar), Apache-2.0; [policy reference](https://docs.cedarpolicy.com/policies/syntax-policy.html).
-- [cedarpy](https://pypi.org/project/cedarpy/), independently maintained Python binding; retain its bundled notices when redistributing binaries.
-- [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) and [DynamoDB conditional writes](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html).
-- Python standard library, pytest, boto3, and Playwright for their respective runtime/test roles. Third-party dependencies keep their own licenses; this repository's original source is MIT-licensed.
-
-No third-party photos, stock illustrations, templates, or remote fonts are used.
+References: [Cedar](https://github.com/cedar-policy/cedar),
+[cedarpy](https://pypi.org/project/cedarpy/),
+[Python scrypt](https://docs.python.org/3.12/library/hashlib.html#hashlib.scrypt).

@@ -18,3 +18,5 @@
 @media(max-width:760px){.nav-button{white-space:nowrap;font-size:.8rem;padding:10px 8px}}
 
 .login-shell{max-width:520px;margin:7vh auto;padding:24px}.login-shell h1{font-size:clamp(2.3rem,7vw,3.6rem);line-height:1.1;margin:22px 0}.login-shell form{margin:28px 0}.login-shell input{width:100%}#login-error{color:#a13326;min-height:1.4em}
+
+.group-code{overflow-wrap:anywhere;font-family:monospace;letter-spacing:.04em}[data-mode="live"] .identity select{opacity:1;color:inherit;border:0}.login-shell .field{margin:14px 0}

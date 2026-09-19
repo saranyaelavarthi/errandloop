@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#183f35"><title>Your people. Your plans. — ErrandLoop</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/onboarding.js"></script></head>
+<body>
+<div class="demo-strip">Going anyway? Make room for a small favour.</div>
+<header class="topbar"><a href="/" class="brand">errand<span>loop</span></a></header>
+<main class="login-shell"><section class="side-card">
+<div class="eyebrow">Small groups. Shared trips.</div><h1>Your people.<br>Your plans.</h1><p>Start with an empty board. Invite neighbours you know and turn trips you already planned into mutual help.</p>
+<div class="tabs" aria-label="Account options"><button type="button" class="tab active" data-mode="create">Create a group</button><button type="button" class="tab" data-mode="join">Join a group</button><button type="button" class="tab" data-mode="login">Sign in</button></div>
+<form id="account-form">
+<div data-fields="create"><label class="field">Group name<input name="group_name" maxlength="60" placeholder="e.g. Maple House"></label><label class="field">Shared handover point<input name="meeting" maxlength="120" placeholder="e.g. Ground-floor reception"></label><label class="field">Pickup locations, one per line<textarea name="places" rows="4" placeholder="Add at least two actual shops or pickup points"></textarea></label></div>
+<div data-fields="join login" hidden><label class="field">Group code<input name="group_code" maxlength="32" autocomplete="off" spellcheck="false" placeholder="The 32-character code from your host"></label></div>
+<div data-fields="create join"><label class="field">Your name<input name="name" maxlength="60" autocomplete="name"></label></div>
+<label class="field">Username<input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_.-]+" required autocomplete="username"></label>
+<label class="field">Password<input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password"><small>At least 12 characters. Keep your password and group code: email recovery is not available yet.</small></label>
+<p id="login-error" role="alert"></p><button class="button primary full" id="account-submit" type="submit">Create my group ↗</button>
+</form><p class="guide-sub">Up to 16 people per group. Use prepared, paid-for pickups with collection permission. Agree handovers with people you know.</p>
+</section></main></body></html>

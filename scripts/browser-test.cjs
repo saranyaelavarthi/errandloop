@@ -11,7 +11,7 @@ let stopServer=()=>{};
 
 (async () => {
   if(process.env.ERRANDLOOP_START_SERVER==='1'){
-    const server=spawn(process.env.ERRANDLOOP_PYTHON||'python',['-m','app.server','--port','8000']);
+    const server=spawn(process.env.ERRANDLOOP_PYTHON||'python',['-m','app.server','--demo','--port','8000']);
     stopServer=()=>server.kill();
     process.on('exit',()=>server.kill());
     await new Promise((resolve,reject)=>{

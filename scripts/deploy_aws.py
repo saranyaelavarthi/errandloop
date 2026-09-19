@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run in an authenticated AWS CloudShell. Never asks for AWS access keys.
 
-Creates/updates only two named CloudFormation stacks. The generated access code
-is a demo password, not an AWS credential. No Docker, SAM CLI, or local Python
+Creates/updates only two named CloudFormation stacks. A random server secret
+signs account sessions; it is not an AWS credential or a user password. No Docker, SAM CLI, or local Python
 3.12 is required: pip downloads the Linux CPython 3.12 Cedar wheel explicitly.
 """
 import argparse
@@ -96,25 +96,27 @@ def package(destination):
                     archive.write(file, file.relative_to(stage))
 
 
-def verify(url, code):
-    opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
+def verify(url):
+    opener = build_opener()
     for attempt in range(12):
         try:
             with opener.open(url + '/', timeout=20) as response:
-                if b'login-form' not in response.read():
-                    raise RuntimeError('The hosted sign-in page did not load.')
-            login = Request(url + '/api/session', data=json.dumps({'code': code}).encode(),
-                            headers={'Content-Type': 'application/json', 'Origin': url})
-            with opener.open(login, timeout=20) as response:
-                if not json.load(response).get('ok'):
-                    raise RuntimeError('Demo sign-in failed.')
-            with opener.open(url + '/api/board', timeout=20) as response:
-                board = json.load(response)
-                if not board.get('members') or 'matching' not in board:
-                    raise RuntimeError('Board or matching was absent.')
-            with opener.open(url + '/', timeout=20) as response:
-                if b'Going anyway?' not in response.read():
-                    raise RuntimeError('The authenticated interface did not load.')
+                if b'account-form' not in response.read():
+                    raise RuntimeError('The public account page did not load.')
+            with opener.open(url + '/api/health', timeout=20) as response:
+                health = json.load(response)
+                if health.get('mode') != 'live-groups' or health.get('policyEngine') != 'Cedar':
+                    raise RuntimeError('The live-group service did not start.')
+            try:
+                opener.open(url + '/api/board', timeout=20)
+            except HTTPError as error:
+                if error.code != 401:
+                    raise
+            else:
+                raise RuntimeError('The board must reject anonymous access.')
+            with opener.open(url + '/onboarding.js', timeout=20) as response:
+                if response.status != 200:
+                    raise RuntimeError('The onboarding script did not load.')
             return
         except HTTPError as error:
             if error.code not in (404, 429, 502, 503, 504) or attempt == 11:
@@ -137,15 +139,15 @@ def main():
     print('Deploying to your authenticated account in ' + args.region + '.', flush=True)
     client = session.client('cloudformation')
     code = secrets.token_urlsafe(32)
-    # Keep the code recoverable even if stack creation or live verification fails.
+    # Keep the session signing secret stable across redeployments.
     credential_file = ROOT / '.errandloop-deployment.json'
     if credential_file.exists():
         previous = json.loads(credential_file.read_text())
         if previous.get('account') == identity['Account'] and previous.get('region') == args.region and previous.get('stack') == args.stack:
-            code = previous['access_code']
+            code = previous.get('session_secret') or previous['access_code']
         else:
             raise RuntimeError('Existing deployment file belongs to another target. Use a separate checkout.')
-    saved = {'account': identity['Account'], 'region': args.region, 'stack': args.stack, 'access_code': code}
+    saved = {'account': identity['Account'], 'region': args.region, 'stack': args.stack, 'session_secret': code}
     fd = os.open(credential_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(fd, 0o600)
     with os.fdopen(fd, 'w') as out:
@@ -162,11 +164,11 @@ def main():
             'CodeBucket': bucket, 'CodeKey': key,
             'AccessHash': hashlib.sha256(code.encode()).hexdigest()}, iam=True)
         url = next(o['OutputValue'] for o in stack['Outputs'] if o['OutputKey'] == 'AppUrl')
-        print('Stack deployed. Checking sign-in, browser page, and persistent board...', flush=True)
-        verify(url, code)
+        print('Stack deployed. Checking public onboarding, Cedar health, and authentication gate...', flush=True)
+        verify(url)
         print('\nVerified app URL: ' + url)
-        print('Demo access code (keep private): ' + code)
-        print('Access code also saved in .errandloop-deployment.json, excluded from Git.')
+        print('Open the URL to create your group and your own account.')
+        print('Private session secret saved in .errandloop-deployment.json, excluded from Git.')
         print('Cleanup instructions: docs/DEPLOY-AWS.md. AWS usage can incur charges.')
 
 

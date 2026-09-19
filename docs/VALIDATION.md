@@ -1,3 +1,24 @@
+# Current live-group validation
+
+- **50 Python tests pass**, including independent-account exchanges, actor-header
+  spoofing denial, group isolation, salted password storage, login lockout,
+  group-code validation, real pickup locations, restart persistence, cloud revision
+  conflicts, and Lambda session identity.
+- A DOM + live HTTP integration test creates two accounts through the actual
+  onboarding forms, checks an empty initial board, posts a real trip through the
+  app, observes it from the second account, and adds a pickup location as owner.
+  It uses jsdom; this is not a visual browser/layout review.
+- JavaScript syntax and both AWS infrastructure templates validate successfully.
+- AWS deployment remains unexecuted without authenticated account access. No public
+  URL, cloud user-flow result, or real-world impact is claimed.
+
+Reproduce DOM integration with Node 24.15+ and `jsdom@30.1.0` installed in a
+separate test environment, then `node scripts/live-dom-test.cjs`. CI runs it with
+Python dependencies installed. Browser screenshots below depict the older demo,
+which is retained only with `--demo`.
+
+## Earlier demonstration-mode checks
+
 # Validation record
 
 Validated on 17 September 2026 in a Linux workspace with Python 3.12 and a Chromium browser.

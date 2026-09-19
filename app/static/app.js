@@ -1,3 +1,4 @@
+const live = document.body.dataset.mode === 'live';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paths = {
@@ -39,7 +40,7 @@ async function refresh(force=false){
   try{
     const next=await api('/api/board');
     const changed=!state || next.version!==state.version || next.actor!==state.actor;
-    state=next;connected=true;$('#connection').hidden=true;
+    state=next;if(live)actor=next.actor;connected=true;$('#connection').hidden=true;
     if(changed||force){render();if(dialogState?.kind==='loop')showLoop(dialogState.id,false);}
   }catch(error){
     connected=false;$('#connection').textContent='The server is unavailable. Your saved board is preserved. Try refreshing in a moment.';$('#connection').hidden=false;
@@ -66,12 +67,13 @@ async function act(command, extra={}, options={}){
 }
 function render(){
   const currentMembers=state.members.map(m=>`<option value="${esc(m.id)}"${m.id===actor?' selected':''}>${esc(m.name)}</option>`).join('');
-  $('#actor').innerHTML=currentMembers;
+  $('#actor').innerHTML=live?`<option>${esc(member(actor).name)}</option>`:currentMembers;
+  $('#actor').disabled=live;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===currentView));
   $('#loop-count').textContent=state.loops.filter(l=>l.members.includes(actor)&&['awaiting','active','needs_handoff'].includes(l.status)).length;
   $('#app').innerHTML=currentView==='board'?renderBoard():currentView==='loops'?renderLoops():renderActivity();
 }
-function intro(title, subtitle, buttons=true){return `<section class="page-intro"><div><div class="eyebrow">${icon('pin',13)} The Courtyard <span aria-hidden="true">/</span> Campus circle</div><h1>${title}</h1><p>${subtitle}</p></div>${buttons?`<div class="actions"><button class="button" data-action="add-request">${icon('bag')}I need a hand</button><button class="button primary" data-action="add-trip">${icon('plus')}I’m heading out</button></div>`:''}</section>`;}
+function intro(title, subtitle, buttons=true){return `<section class="page-intro"><div><div class="eyebrow">${icon('pin',13)} ${esc(state.group?.name || 'The Courtyard')} <span aria-hidden="true">/</span> ${live?'Your group':'Campus circle'}</div><h1>${title}</h1><p>${subtitle}</p></div>${buttons?`<div class="actions"><button class="button" data-action="add-request">${icon('bag')}I need a hand</button><button class="button primary" data-action="add-trip">${icon('plus')}I’m heading out</button></div>`:''}</section>`;}
 function renderBoard(){
   const candidates=state.matching.candidates.filter(c=>c.members.includes(actor));
   const candidate=candidates.find(c=>c.recommended)||candidates[0];
@@ -80,13 +82,13 @@ function renderBoard(){
   const reason=state.matching.unmatched.find(x=>x.member===actor);
   return `${intro('Going anyway?', 'Turn your next trip into a little help for someone nearby.')}
     <div class="layout"><section aria-label="Community board">${feature(candidate,active)}
-      <div class="section-top"><h2>Around the courtyard</h2><span>${state.members.length} demo neighbours</span></div>
+      <div class="section-top"><h2>Around your group</h2><span>${state.members.length} ${live?'members':'demo neighbours'}</span></div>
       <div class="filters"><div class="tabs" role="tablist" aria-label="Board posts"><button class="tab ${boardTab==='trips'?'active':''}" role="tab" aria-selected="${boardTab==='trips'}" data-tab="trips">Heading out <span>${state.trips.filter(t=>t.status==='open').length}</span></button><button class="tab ${boardTab==='requests'?'active':''}" role="tab" aria-selected="${boardTab==='requests'}" data-tab="requests">Need a hand <span>${state.requests.filter(r=>r.status==='open').length}</span></button></div>
       <select class="filter-select" id="place-filter" aria-label="Filter by destination"><option value="all">Everywhere nearby</option>${state.places.map(p=>`<option value="${esc(p.id)}" ${destination===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
       <div class="cards" role="tabpanel">${open.length?open.map(card).join(''):`<div class="empty"><h3>No open ${boardTab==='trips'?'trips':'requests'} here yet.</h3><p>Try another destination, or add your own post.</p><button class="button" data-action="add-${boardTab==='trips'?'trip':'request'}">${icon('plus')}Add a post</button></div>`}</div>
       ${reason?`<div class="match-reasons">${icon('info',17)}<span><strong>Still looking for your circle.</strong> ${esc(reason.reason)}</span></div>`:''}
     </section><aside class="side-column" aria-label="Your posts and group summary">${pocket()}
-      <div class="side-card community-card"><div class="eyebrow">A little goes a long way</div><div class="avatars">${state.members.slice(1,5).map(m=>avatar(m.id)).join('')}</div><div class="community-number">${state.matching.potentialTripsAvoided}</div><p>extra pickup trips could be avoided with the suggested circles.</p><small>Assumes one separate pickup trip per request. This is a demo estimate, not a measured saving.</small></div>
+      <div class="side-card community-card"><div class="eyebrow">A little goes a long way</div><div class="avatars">${state.members.slice(1,5).map(m=>avatar(m.id)).join('')}</div><div class="community-number">${state.matching.potentialTripsAvoided}</div><p>extra pickup trips could be avoided with the suggested circles.</p><small>Assumes one separate pickup trip per request. This is an estimate, not a measured saving.</small></div>
       <div class="quiet-note"><strong>${icon('loop',16)} A favour comes full circle.</strong>You help one neighbour. Another helps you. Everyone says yes before anyone sets off.<br><button class="subtle-link" data-action="guide">See how it works ↗</button></div>
     </aside></div>`;
 }
@@ -134,7 +136,7 @@ function edgesHTML(c, progress=false){return c.edges.map(e=>`<div class="exchang
 function showMatch(id){
   const c=state.matching.candidates.find(c=>c.id===id);if(!c){notify('This suggestion changed. Please refresh the board.');return;}
   openModal('A little help, all the way round.',`${c.members.length} neighbours · One exchange`,
-    `<p>Here’s exactly who collects what. Nothing is agreed until every neighbour accepts.</p>${edgesHTML(c)}<div class="check-list"><span>${icon('check',15)}Same planned stops</span><span>${icon('check',15)}Deadlines fit</span><span>${icon('check',15)}Bag space checked</span></div><div class="callout guide-sub">All handovers are at the courtyard. Pickups must be prepared and paid for, with collection permission arranged separately.</div><div class="actions"><button class="button primary full" data-mutation data-action="propose" data-id="${id}">I’m in — propose this circle ${icon('arrow')}</button></div><p class="guide-sub">This reserves everyone’s posts while they decide. Unaccepted circles expire at the first departure.</p>`, 'match',id);
+    `<p>Here’s exactly who collects what. Nothing is agreed until every neighbour accepts.</p>${edgesHTML(c)}<div class="check-list"><span>${icon('check',15)}Same planned stops</span><span>${icon('check',15)}Deadlines fit</span><span>${icon('check',15)}Bag space checked</span></div><div class="callout guide-sub">Handovers: ${esc(state.group?.meeting || 'the courtyard')}. Pickups must be prepared and paid for, with collection permission arranged separately.</div><div class="actions"><button class="button primary full" data-mutation data-action="propose" data-id="${id}">I’m in — propose this circle ${icon('arrow')}</button></div><p class="guide-sub">This reserves everyone’s posts while they decide. Unaccepted circles expire at the first departure.</p>`, 'match',id);
 }
 function showLoop(id,focus=true){
   const l=state.loops.find(l=>l.id===id);if(!l){closeModal();return;}
@@ -145,13 +147,13 @@ function showLoop(id,focus=true){
     ${l.status==='awaiting'?`<div class="actions">${!l.accepted.includes(actor)?`<button class="button primary" data-mutation data-action="accept" data-id="${id}">Yes, I’m in ${icon('check')}</button><button class="button" data-mutation data-action="decline" data-id="${id}">Decline</button>`:'<p class="guide-sub">You’ve accepted. Waiting for the others.</p>'}</div><p class="guide-sub">Everyone must accept before ${time(l.expires)}.</p>`:''}
     ${['awaiting','active'].includes(l.status)?`<button class="subtle-link" data-action="cancel-loop-prompt" data-id="${id}">I can’t make this trip</button>`:''}
     ${l.status==='completed'?'<div class="callout">Every receiver confirmed their item. This circle is complete. Thanks for helping it happen.</div>':''}
-    <div class="pocket-divider"></div><div class="guide-sub"><strong>Demo controls</strong> · Play another participant to test their consent and handover.<div class="actions">${l.members.filter(m=>m!==actor).map(m=>`<button class="button small" data-action="switch" data-member="${m}" data-loop="${id}">Continue as ${esc(member(m).name)}</button>`).join('')}</div></div>`, 'loop',id,focus);
+    ${live ? '' : `<div class="pocket-divider"></div><div class="guide-sub"><strong>Demo controls</strong> · Play another participant to test their consent and handover.<div class="actions">${l.members.filter(m=>m!==actor).map(m=>`<button class="button small" data-action="switch" data-member="${m}" data-loop="${id}">Continue as ${esc(member(m).name)}</button>`).join('')}</div></div>`}`, 'loop',id,focus);
 }
 function showPost(id){
   const p=[...state.trips,...state.requests].find(p=>p.id===id);if(!p)return;
   const trip='depart' in p;
   openModal(trip?esc(place(p.destination).name):esc(p.item),`${esc(name(p.member))} · ${trip?'Planned trip':'Pickup request'}`,
-    `<p>${esc(p.note)}</p><div class="callout">${trip?`Leaves at ${time(p.depart)} · Returns by ${time(p.returns)}<br>Room for ${p.capacity} small items.`:`Ready at ${time(p.ready)} · Needed by ${time(p.deadline)}<br>${p.units} small-item space${p.units>1?'s':''} · ${esc(place(p.destination).name)}`}</div><p class="guide-sub">Status: ${esc(p.status)}. A small-item space is a rough carrying estimate agreed by this demo group.</p>${p.member===actor&&p.status==='open'?`<div class="actions"><button class="button danger" data-mutation data-action="cancel-post" data-id="${p.id}">Remove this ${trip?'trip':'request'}</button></div>`:''}${p.status==='reserved'||p.status==='active'?'<p class="guide-sub">This post is in a circle. Open My circles to manage it.</p>':''}`, 'post',id);
+    `<p>${esc(p.note)}</p><div class="callout">${trip?`Leaves at ${time(p.depart)} · Returns by ${time(p.returns)}<br>Room for ${p.capacity} small items.`:`Ready at ${time(p.ready)} · Needed by ${time(p.deadline)}<br>${p.units} small-item space${p.units>1?'s':''} · ${esc(place(p.destination).name)}`}</div><p class="guide-sub">Status: ${esc(p.status)}. A small-item space is a rough carrying estimate agreed by your group.</p>${p.member===actor&&p.status==='open'?`<div class="actions"><button class="button danger" data-mutation data-action="cancel-post" data-id="${p.id}">Remove this ${trip?'trip':'request'}</button></div>`:''}${p.status==='reserved'||p.status==='active'?'<p class="guide-sub">This post is in a circle. Open My circles to manage it.</p>':''}`, 'post',id);
 }
 function localDate(ts){const d=new Date(ts*1000);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
 function showForm(type){
@@ -161,10 +163,10 @@ function showForm(type){
   openModal(type==='trip'?'Where are you heading?':'What can someone pick up?',`${esc(name(actor))} · A small favour`,
     `<form id="post-form" data-type="${type}"><div class="form-error" id="form-error" role="alert" tabindex="-1"></div><div class="form-grid"><label class="field full">${type==='trip'?'I’m already going to':'Pickup location'}<select name="destination" required>${places}</select></label>
     ${type==='request'?'<label class="field full">What needs collecting?<input name="item" required maxlength="90" placeholder="e.g. My prepaid assignment printout"><small>Prepared collections only. Arrange payment and pickup permission separately.</small></label>':''}
-    ${type==='trip'?`<label class="field">Leaving at<input type="datetime-local" name="depart" required value="${localDate(now+1800)}" min="${localDate(now+60)}" max="${localDate(now+86400)}"></label><label class="field">Back at courtyard by<input type="datetime-local" name="returns" required value="${localDate(now+3600)}" min="${localDate(now+120)}" max="${localDate(now+86400)}"></label>`:`<label class="field">Ready for pickup at<input type="datetime-local" name="ready" required value="${localDate(now)}"></label><label class="field">I need it by<input type="datetime-local" name="deadline" required value="${localDate(now+7200)}" min="${localDate(now+60)}" max="${localDate(now+86400)}"></label>`}
+    ${type==='trip'?`<label class="field">Leaving at<input type="datetime-local" name="depart" required value="${localDate(now+1800)}" min="${localDate(now+60)}" max="${localDate(now+86400)}"></label><label class="field">Back at handover point by<input type="datetime-local" name="returns" required value="${localDate(now+3600)}" min="${localDate(now+120)}" max="${localDate(now+86400)}"></label>`:`<label class="field">Ready for pickup at<input type="datetime-local" name="ready" required value="${localDate(now)}"></label><label class="field">I need it by<input type="datetime-local" name="deadline" required value="${localDate(now+7200)}" min="${localDate(now+60)}" max="${localDate(now+86400)}"></label>`}
     <label class="field full">${type==='trip'?'Space I can offer':'Space this needs'}<select name="${type==='trip'?'capacity':'units'}">${[1,2,3,4,5].map(n=>`<option value="${n}">${n} small item${n>1?'s':''}</option>`).join('')}</select><small>Think a paperback, document envelope, or small prepared package per space.</small></label><label class="field full">A note for your neighbour<textarea name="note" maxlength="180" placeholder="Collection details, item size, or anything useful."></textarea></label></div><div class="actions"><button class="button primary full" type="submit">Post ${type==='trip'?'my trip':'my request'} ${icon('arrow')}</button></div><p class="guide-sub">One active trip and one active request per person. Exact existing destinations only; no detours.</p></form>`, 'form',type);
 }
-function guide(){openModal('A favour comes full circle.','The 2-minute walkthrough',
+function guide(){if(live){showGroup();return;}openModal('A favour comes full circle.','The 2-minute walkthrough',
   `<p>ErrandLoop looks for exchanges among trips people already planned. Each person helps a neighbour and receives help from the next.</p><div class="step"><span class="step-num">1</span><div><p><strong>Start in Sana’s demo seat.</strong></p><small>Sana appears as “You” in this seat. Her grocery trip and printout request are already posted.</small></div></div><div class="step"><span class="step-num">2</span><div><p><strong>Review and propose the suggested circle.</strong></p><small>You collect Ravi’s coffee. Asha collects your printout. Ravi collects Asha’s book.</small></div></div><div class="step"><span class="step-num">3</span><div><p><strong>Take Asha’s seat, then Ravi’s.</strong></p><small>Use the demo switcher. Both must accept their own part before the circle activates.</small></div></div><div class="step"><span class="step-num">4</span><div><p><strong>Collect, hand over, and close the circle.</strong></p><small>Only the collector marks an item collected. Only its receiver confirms receipt. Try cancelling before and after collection.</small></div></div><div class="callout guide-sub">For a blank start, take Kabir’s seat and post your own trip and request. “Start fresh” restores the fictional board with new future times.</div><p class="guide-sub">This is a single-group demo. Switching seats is a demonstration feature, not a real sign-in system. No money changes hands in the app, and no live location is tracked.</p><div class="actions"><button class="button primary full" data-action="close">Let’s find a circle ${icon('arrow')}</button></div>`, 'guide');}
 
 document.addEventListener('click', async event=>{
@@ -176,6 +178,8 @@ document.addEventListener('click', async event=>{
   const {action,id}=button.dataset;
   if(action==='close')closeModal();
   else if(action==='guide')guide();
+  else if(action==='group')showGroup();
+  else if(action==='copy-group'){try{await navigator.clipboard.writeText(state.group.id);notify('Group code copied. Share it privately with your neighbours.');}catch(e){notify('Select and copy the group code shown above.');}}
   else if(action==='refresh')await refresh(true);
   else if(action==='go-board'){currentView='board';render();}
   else if(action==='add-trip')showForm('trip');
@@ -199,15 +203,16 @@ document.addEventListener('click', async event=>{
     try{state=await api('/api/reset',{});actor='you';localStorage.setItem('errandloop-actor',actor);currentView='board';destination='all';boardTab='trips';closeModal();await refresh(true);notify('Fresh board, fresh opportunities.');}catch(e){notify(e.message);}
   }
   else if(action==='export'){
-    const report={app:'ErrandLoop',exportedAt:new Date().toISOString(),notice:'Fictional campus demo. Not verified real-world impact.',loops:state.loops,activity:state.activity,metrics:state.metrics};
+    const report={app:'ErrandLoop',exportedAt:new Date().toISOString(),notice:live?'Group activity record; trip savings are estimates.':'Fictional campus demo. Not verified real-world impact.',loops:state.loops,activity:state.activity,metrics:state.metrics};
     const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='errandloop-activity.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 });
 document.addEventListener('change',async event=>{
-  if(event.target.id==='actor'){actor=event.target.value;localStorage.setItem('errandloop-actor',actor);closeModal();await refresh(true);}
+  if(event.target.id==='actor'&&!live){actor=event.target.value;localStorage.setItem('errandloop-actor',actor);closeModal();await refresh(true);}
   if(event.target.id==='place-filter'){destination=event.target.value;render();}
 });
 document.addEventListener('submit',async event=>{
+  if(event.target.id==='place-form'){event.preventDefault();const button=event.target.querySelector('button');button.disabled=true;try{state=await api('/api/places',{name:new FormData(event.target).get('name')});render();showGroup();notify('Pickup location added.');}catch(e){notify(e.message);button.disabled=false;}return;}
   if(event.target.id!=='post-form')return;
   event.preventDefault();const form=event.target, type=form.dataset.type, data=Object.fromEntries(new FormData(form));
   for(const key of ['depart','returns','ready','deadline'])if(data[key])data[key]=Math.floor(new Date(data[key]).getTime()/1000);
@@ -220,3 +225,15 @@ modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundin
 new MutationObserver(layoutCycle).observe($('#app'),{childList:true,subtree:true});
 await refresh(true);
 setInterval(()=>{if(!document.hidden&&!saving)refresh();},15000);
+
+function showGroup(){
+  if(!live||!state)return;
+  openModal(esc(state.group.name),'Your group',
+    `<p>Invite people you know. Each person joins with this code and creates their own username and password.</p>
+    <div class="callout"><strong>Group code</strong><p class="group-code">${esc(state.group.id)}</p><button class="button small" data-action="copy-group">Copy group code</button></div>
+    <p><strong>Handover point:</strong> ${esc(state.group.meeting)}</p>
+    <p>Post your actual trip and what you need collected. Matches appear when at least two members have compatible trips and requests. Each person must accept from their own account.</p>
+    <h3>Pickup locations</h3><ul>${state.places.map(p=>`<li>${esc(p.name)}</li>`).join('')}</ul>
+    ${state.group.owner===actor?'<form id="place-form"><label class="field">Add a pickup location<input name="name" required minlength="2" maxlength="60"></label><button class="button primary" type="submit">Add location</button></form>':''}
+    <p class="guide-sub">${state.members.length}/16 members. Keep the group code for future sign-in. Password recovery and member removal are not available in this first version.</p>`, 'group');
+}

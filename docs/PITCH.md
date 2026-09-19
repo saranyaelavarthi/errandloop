@@ -1,47 +1,20 @@
-# ErrandLoop: a three-minute demonstration
+# Current live-group demo
 
-## 0:00–0:25 — Start with a familiar inconvenience
+1. Create an empty group with your name, username, password, real handover point,
+   and two pickup locations. Show that the board has no seeded posts.
+2. In another browser profile or incognito window, join with the group code and a
+   separate account. On a public deployment, use a second device instead.
+3. Person A posts a trip to location A and a request from B. Person B posts a trip
+   to B and a request from A. Use compatible future times and bag space.
+4. Propose the resulting circle. Person B must accept from their own account.
+5. Each collector marks collection; switch browser windows, not identities, to
+   confirm receipt as the recipient. The completed circle persists after reload.
 
-“I need a printout. My friend needs a prepared grocery order. We each make an extra trip because we do not know who is already going where. In a hostel, a small favour is often one message away, but those messages get buried.”
+The contribution is reciprocal exchanges among existing trips, exact constraints,
+consent, and recoverable handovers. No first-ever novelty or measured impact is
+claimed. AWS Cedar enforces actor and group permissions; hosted deployment uses
+Lambda, API Gateway, and DynamoDB. State deployment status honestly: do not claim
+an AWS URL before the deployment script succeeds.
 
-Do not claim this story came from an interview unless you actually conducted one.
-
-## 0:25–1:00 — Show the circle
-
-“Here I am going to the shop. Asha is going to Print Point. Ravi is going to the library. ErrandLoop finds a complete exchange: I pick up Ravi's order, Ravi collects Asha's reserved book, and Asha collects my printout. It checks all three deadlines and carrying limits.”
-
-Open the circle. Point to each concrete handover. There are no invented distances, prices, or emission figures.
-
-## 1:00–1:45 — Demonstrate consent, not just matching
-
-Propose the circle as Sana (shown as “You”). Switch the clearly labelled demo seat to Asha, then Ravi, and accept separately.
-
-“A match is only a suggestion. Every person controls their own commitment. The source of that rule is an executable Cedar policy, not just a hidden button.”
-
-Mark an item collected. Switch to its receiver and confirm receipt.
-
-## 1:45–2:20 — Let the judges break a promise
-
-Cancel after one collection. Show `Handover needs attention`.
-
-“The app does not forget that someone is already holding an item. It keeps those handovers visible and avoids sending another neighbour to collect the same thing.”
-
-Reset and show a cancellation before collection. The other requests reopen.
-
-## 2:20–3:00 — Explain the engineering and the next validation
-
-“The matcher builds a directed graph, finds circles of two to four people, and selects non-overlapping circles to serve the most requests. It is deterministic and tested against a brute-force oracle. Cedar enforces who can take each action. SQLite makes the local demo persistent, and the AWS template uses Lambda and conditional DynamoDB writes.”
-
-“The next step is a consent-based pilot with a small hostel group: measure successful handovers, cancellations, and trips participants say they actually avoided. Today's numbers are simulated, not evidence of community impact.”
-
-## Answers to likely questions
-
-**Why not a group chat?** Chat already enables favours. This prototype adds constraint-aware multi-person matching and an explicit record of acceptance and handover. A pilot must establish whether those benefits outweigh the effort of posting.
-
-**Why not simply help without expecting something back?** Mutual circles are this experiment's scope, not a rule for community kindness. One-way help can be added later without weakening voluntary consent.
-
-**Why AWS?** Cedar's explicit policy model is a real runtime dependency. The same state machine can use Lambda and DynamoDB. No unnecessary LLM calls are used to solve an exact graph problem.
-
-**What is novel?** This particular combination and user experience. We do not claim to invent neighbour favours or graph algorithms.
-
-**What is not finished?** Public multi-user authentication, real group onboarding, messaging, collection permissions, and a real-world pilot. The current demo is intentionally local and fictional.
+The earlier fictional walkthrough is available with `--demo`; it is separate from
+real groups and is not the default product experience.

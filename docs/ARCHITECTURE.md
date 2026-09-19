@@ -1,3 +1,7 @@
+# Live-group update
+
+The default app uses `live.py` and `groups.py`; local groups live in a separate SQLite table and hosted groups use one DynamoDB item per group. Individual salted-scrypt accounts and signed sessions replace demo actor selection. Cedar receives the actual group ID. `live_handler.py` serves the public AWS app. The design below documents the original matcher and demonstration mode; sample data is now available only with `--demo`.
+
 # Architecture and invariants
 
 The browser sends commands to one Python service. The service validates inputs, evaluates Cedar policy using server-owned relationships, changes state inside a transaction, and returns a fresh view. The matcher only reads state.

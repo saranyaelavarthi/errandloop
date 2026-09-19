@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "ErrandLoop protected hosted demo: browser, API, Cedar, DynamoDB",
+  "Description": "ErrandLoop live groups: account sessions, browser, API, Cedar, DynamoDB",
   "Parameters": {
     "CodeBucket": {
       "Type": "String"
@@ -110,7 +110,7 @@
         "Architectures": [
           "x86_64"
         ],
-        "Handler": "app.hosted_handler.handler",
+        "Handler": "app.live_handler.handler",
         "Timeout": 15,
         "MemorySize": 512,
         "Role": {
@@ -222,7 +222,7 @@
           "ApiEndpoint"
         ]
       },
-      "Description": "Open this HTTPS URL and enter the generated demo access code."
+      "Description": "Public HTTPS app URL. Create a group or sign in with your own account."
     }
   }
 }

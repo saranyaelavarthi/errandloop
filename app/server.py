@@ -1,5 +1,6 @@
 """Local demo server. Explicit member switching is for demo use, not authentication."""
 import argparse
+import os
 import json
 import mimetypes
 from pathlib import Path
@@ -21,8 +22,14 @@ def main():
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--open', action='store_true', help='Open the app in your default browser')
+    parser.add_argument('--demo', action='store_true', help='Use the fictional sample board')
     args = parser.parse_args()
-    store = get_store()
+    if args.demo:
+        store = get_store()
+    else:
+        from .groups import LocalGroups
+        from .live import dispatch
+        store = LocalGroups(os.environ.get('ERRANDLOOP_LIVE_DB', 'errandloop-groups.sqlite3'))
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, payload, content_type='application/json; charset=utf-8'):
@@ -36,7 +43,26 @@ def main():
             self.end_headers()
             self.wfile.write(payload)
 
+        def live_request(self, method):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if size < 0 or size > 16000:
+                    self.send(413, {'error': 'Request is too large.'}); return
+                raw = self.rfile.read(size).decode() if method == 'POST' else ''
+                result = dispatch(store, store.key, method, urlsplit(self.path).path, dict(self.headers), raw, 'http://' + self.headers.get('Host', ''), secure=False)
+                body = result['body'].encode()
+                self.send_response(result['statusCode'])
+                for key, value in result['headers'].items(): self.send_header(key, value)
+                for cookie in result.get('cookies', []): self.send_header('Set-Cookie', cookie)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            except (ValueError, UnicodeError):
+                self.send(400, {'error': 'Invalid request.'})
+
         def do_GET(self):
+            if not args.demo:
+                self.live_request('GET'); return
             path = urlsplit(self.path).path
             if path in ASSETS:
                 file = STATIC / ASSETS[path]
@@ -45,6 +71,8 @@ def main():
                 self.send(*handle(store, 'GET', path, self.headers.get('X-Demo-Member', 'you')))
 
         def do_POST(self):
+            if not args.demo:
+                self.live_request('POST'); return
             # JSON + custom header + same-origin guard prevents cross-origin form writes.
             origin = self.headers.get('Origin')
             if origin and origin != 'http://' + self.headers.get('Host', ''):
@@ -72,7 +100,7 @@ def main():
             pass
 
     print(f'ErrandLoop is running at http://{args.host}:{args.port}', flush=True)
-    print('Fictional campus demo. Press Ctrl+C to stop.', flush=True)
+    print(('Fictional sample board.' if args.demo else 'Create a group or sign in. Your data is saved locally.') + ' Press Ctrl+C to stop.', flush=True)
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     if args.open:
         threading.Timer(0.5, lambda: webbrowser.open(f'http://127.0.0.1:{args.port}')).start()

@@ -64,6 +64,7 @@ def view(state, now, member='you'):
     # A copy also protects callers from mutating storage through a returned response.
     result = deepcopy(state)
     result.pop('operations', None)
+    result.pop('accounts', None)
     result['matching'] = find_matches(state, now)
     result['now'] = now
     result['actor'] = member
@@ -75,6 +76,9 @@ def view(state, now, member='you'):
 def mutate(state, member, command, data, now):
     require(isinstance(data, dict), 'Request must be a JSON object.')
     require(any(m['id'] == member for m in state['members']), 'Unknown member.')
+    group = state.get('group', {}).get('id', 'courtyard')
+    def check(member, action, kind, rid, attrs):
+        return authorize(member, action, kind, rid, attrs, group=group)
     op = text(data.get('operation'), 'Operation ID', 80)
     require(re.fullmatch(r'[A-Za-z0-9-]+', op), 'Invalid operation ID.')
     previous = next((x for x in state['operations'] if x['id'] == op and x['member'] == member), None)
@@ -84,14 +88,14 @@ def mutate(state, member, command, data, now):
     if data.get('version') != state['version']:
         raise Conflict('The board changed. We refreshed it; please review and try again.')
     if command in ('trip', 'request'):
-        authorize(member, 'post', 'Group', 'courtyard', {'id': 'courtyard'})
+        check(member, 'post', 'Group', group, {'id': group})
         collection = state['trips' if command == 'trip' else 'requests']
         require(not any(x['member'] == member and x['status'] in ('open', 'reserved', 'active') for x in collection),
                 'Finish or cancel your existing post before adding another.')
         destination = data.get('destination')
         require(destination in [p['id'] for p in state['places']], 'Choose a listed destination.')
         item = {'id': identifier(), 'member': member, 'destination': destination, 'status': 'open',
-                'note': text(data.get('note') or 'Meet at the courtyard.', 'Note')}
+                'note': text(data.get('note') or ('Meet at ' + state.get('group', {}).get('meeting', 'the courtyard') + '.'), 'Note')}
         if command == 'trip':
             item.update(depart=integer(data.get('depart'), 'Departure', now + 60, now + 86400),
                         returns=integer(data.get('returns'), 'Return', now + 120, now + 86400),
@@ -109,15 +113,15 @@ def mutate(state, member, command, data, now):
         collection = state['trips'] + state['requests']
         post = next((p for p in collection if p['id'] == data.get('id')), None)
         require(post is not None, 'Post not found.')
-        authorize(member, command, 'Post', post['id'], {'owner': ref('Member', post['member']), 'group': 'courtyard'})
+        check(member, command, 'Post', post['id'], {'owner': ref('Member', post['member']), 'group': group})
         require(post['status'] == 'open', 'A matched post must be cancelled through its circle.')
         post['status'] = 'cancelled'
         record(state, member, 'Removed an open post.', now)
     elif command == 'propose':
         candidate = next((c for c in find_matches(state, now)['candidates'] if c['id'] == data.get('id')), None)
         require(candidate is not None, 'This circle is no longer available. Refresh the board.')
-        authorize(member, command, 'Loop', candidate['id'],
-                  {'members': [ref('Member', m) for m in candidate['members']], 'group': 'courtyard'})
+        check(member, command, 'Loop', candidate['id'],
+                  {'members': [ref('Member', m) for m in candidate['members']], 'group': group})
         loop = deepcopy(candidate)
         loop.update(id=identifier(), status='awaiting', accepted=[member], created=now)
         for edge in loop['edges']:
@@ -130,8 +134,8 @@ def mutate(state, member, command, data, now):
         loop = next((l for l in state['loops'] if l['id'] == data.get('id')), None)
         require(loop is not None, 'Circle not found.')
         if command in ('accept', 'decline', 'cancel_loop'):
-            authorize(member, command, 'Loop', loop['id'],
-                      {'members': [ref('Member', m) for m in loop['members']], 'group': 'courtyard'})
+            check(member, command, 'Loop', loop['id'],
+                      {'members': [ref('Member', m) for m in loop['members']], 'group': group})
             if command == 'accept':
                 require(loop['status'] == 'awaiting' and loop['expires'] > now, 'This circle is no longer awaiting replies.')
                 if member not in loop['accepted']:
@@ -157,8 +161,8 @@ def mutate(state, member, command, data, now):
         elif command in ('collected', 'received'):
             edge = next((e for e in loop['edges'] if e['request'] == data.get('request')), None)
             require(edge is not None, 'Handover not found.')
-            authorize(member, command, 'Handover', edge['request'],
-                      {'giver': ref('Member', edge['giver']), 'receiver': ref('Member', edge['receiver']), 'group': 'courtyard'})
+            check(member, command, 'Handover', edge['request'],
+                      {'giver': ref('Member', edge['giver']), 'receiver': ref('Member', edge['receiver']), 'group': group})
             require(loop['status'] in ('active', 'needs_handoff'), 'All members must accept before collection.')
             if command == 'received':
                 require(edge['collected'], 'The collector must mark this item collected first.')
