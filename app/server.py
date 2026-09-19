@@ -99,9 +99,14 @@ def main():
             # Never log request bodies or pickup notes.
             pass
 
+    try:
+        server = ThreadingHTTPServer((args.host, args.port), Handler)
+    except OSError as error:
+        parser.exit(1, f'Cannot start on {args.host}:{args.port}: {error}\n'
+                    'If another ErrandLoop window is running, stop it with Ctrl+C.\n'
+                    'Or choose another port: python scripts/run_local.py --port 8001\n')
     print(f'ErrandLoop is running at http://{args.host}:{args.port}', flush=True)
     print(('Fictional sample board.' if args.demo else 'Create a group or sign in. Your data is saved locally.') + ' Press Ctrl+C to stop.', flush=True)
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
     if args.open:
         threading.Timer(0.5, lambda: webbrowser.open(f'http://127.0.0.1:{args.port}')).start()
     server.serve_forever()

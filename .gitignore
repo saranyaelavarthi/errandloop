@@ -12,3 +12,5 @@ test-results/
 *.bundle
 .deploy-venv/
 .errandloop-deployment.json
+
+.venv-backup-*/

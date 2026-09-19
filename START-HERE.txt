@@ -11,3 +11,11 @@ Use another browser or incognito window to test a second account locally.
 Keep the terminal open. Stop with Ctrl+C. Local data persists in errandloop-groups.sqlite3.
 Optional fictional sample: python -m app.server --demo --open
 Public deployment instructions: docs/DEPLOY-AWS.md
+
+TROUBLESHOOTING
+Windows Git Bash: python scripts/run_local.py
+The launcher preserves and replaces an incomplete .venv automatically.
+If port 8000 is in use: python scripts/run_local.py --port 8001
+Keep the terminal open and use the exact address printed there.
+If the page has old controls after an update, press Ctrl+Shift+R.
+If something fails, share the terminal error or a screenshot of the page.
