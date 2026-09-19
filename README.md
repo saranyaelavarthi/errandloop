@@ -127,3 +127,9 @@ rules. Original code is MIT-licensed; dependencies retain their own licenses.
 References: [Cedar](https://github.com/cedar-policy/cedar),
 [cedarpy](https://pypi.org/project/cedarpy/),
 [Python scrypt](https://docs.python.org/3.12/library/hashlib.html#hashlib.scrypt).
+
+## Submission and demonstration
+
+See [the submission writeup and 2:45 recording plan](docs/SUBMISSION.md).
+Circle reviews explain each pickup’s readiness, capacity and deadline margin.
+The board separates receiver-confirmed handovers from estimated opportunities.

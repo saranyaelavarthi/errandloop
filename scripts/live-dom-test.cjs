@@ -72,8 +72,43 @@ function submit(window,id,fields){
   assert.match(app.document.querySelector('#modal').textContent,new RegExp(board.group.id));
   submit(app,'#place-form',{name:'Actual print shop'});
   await poll(()=>app.document.querySelector('#modal').textContent.includes('Actual print shop'));
+  // Exercise the actual circle controls with separate signed-in browser clients.
+  async function action(who,command,data){
+    const snapshot=await (await who.request('/api/board')).json();
+    const response=await who.request('/api/actions/'+command,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:snapshot.version,operation:crypto.randomUUID(),...data})});
+    const result=await response.json();assert.equal(response.status,200,JSON.stringify(result));return result;
+  }
+  const now=Math.floor(Date.now()/1000);
+  await action(alice,'request',{destination:board.places[1].id,item:'Library reservation',ready:now,deadline:now+7200,units:1});
+  await action(bob,'trip',{destination:board.places[1].id,depart:now+1800,returns:now+3600,capacity:2});
+  await action(bob,'request',{destination:board.places[0].id,item:'Prepared shop order',ready:now,deadline:now+7200,units:1});
+  const review=await page(alice,'app.js');
+  review.document.querySelector('[data-action="match"]').click();
+  assert.match(review.document.querySelector('.match-proof').textContent,/Deadline margin/);
+  assert.match(review.document.querySelector('.match-proof').textContent,/1 of 2 spaces needed/);
+  review.document.querySelector('[data-action="propose"]').click();
+  await poll(()=>Boolean(review.document.querySelector('[data-action="cancel-loop-prompt"]')));
+  const consent=await page(bob,'app.js');
+  consent.document.querySelector('[data-action="loop"]').click();
+  consent.document.querySelector('[data-action="accept"]').click();
+  await poll(()=>Boolean(consent.document.querySelector('[data-action="collected"]')));
+  for(const who of [alice,bob]){
+    const w=await page(who,'app.js');w.document.querySelector('[data-action="loop"]').click();
+    const collect=w.document.querySelector('[data-action="collected"]');
+    if(collect){collect.click();await poll(()=>!w.document.querySelector('[data-action="collected"]'));}
+  }
+  for(const who of [alice,bob]){
+    const w=await page(who,'app.js');w.document.querySelector('[data-action="loop"]').click();
+    assert.equal(w.document.querySelectorAll('[data-action="received"]').length,1);
+    w.document.querySelector('[data-action="received"]').click();
+    await poll(()=>!w.document.querySelector('[data-action="received"]'));
+  }
+  const final=await page(alice,'app.js');
+  assert.match(final.document.querySelector('.progress-counts').textContent,/2receiver-confirmed handovers1completed circles/);
+  final.document.querySelector('[data-action="guide"]').click();
+  assert.match(final.document.querySelector('#modal').textContent,/Post both sides/);
   assert.deepEqual(errors,[]);
-  console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location.');
+  console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location, match explanation, mutual consent, collection, recipient-only receipt, completed metrics and live guide.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{
   windows.forEach(w=>w.close());server.kill();fs.rmSync(temp,{recursive:true,force:true});
 });

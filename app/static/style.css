@@ -20,3 +20,6 @@
 .login-shell{max-width:520px;margin:7vh auto;padding:24px}.login-shell h1{font-size:clamp(2.3rem,7vw,3.6rem);line-height:1.1;margin:22px 0}.login-shell form{margin:28px 0}.login-shell input{width:100%}#login-error{color:#a13326;min-height:1.4em}
 
 .group-code{overflow-wrap:anywhere;font-family:monospace;letter-spacing:.04em}[data-mode="live"] .identity select{opacity:1;color:inherit;border:0}.login-shell .field{margin:14px 0}
+
+/* Explain the match using the group's posted constraints. */
+.match-proof{margin:24px 0;padding:22px;background:#f3f5ec;border:1px solid #dce2cf;border-radius:16px}.match-proof h3{margin:8px 0}.match-proof>p{font-size:14px;line-height:1.6}.proof-row{padding:16px 0;border-top:1px solid #dce2cf}.proof-row dl{margin:12px 0 0;display:grid;gap:10px}.proof-row dl>div{display:grid;grid-template-columns:120px 1fr;gap:12px;font-size:13px}.proof-row dt{color:#5c6957}.proof-row dd{margin:0}.progress-counts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}.progress-counts strong{display:block;font-size:32px;font-weight:500}.progress-counts span{display:block;font-size:12px;line-height:1.5}.how-steps{padding-left:22px}.how-steps li{padding:9px 0;line-height:1.7}@media(max-width:480px){.match-proof{padding:16px}.proof-row dl>div{grid-template-columns:1fr;gap:3px}}
