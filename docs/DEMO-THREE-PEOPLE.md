@@ -81,3 +81,10 @@ dispute resolution, or proof of physical delivery.
 - Upload public/unlisted to YouTube and verify the video link signed out.
 - Check actual project start time against the event's build-window rules. Never
   alter history to make an earlier project appear eligible.
+
+## If no circle appears
+
+Open **See what needs to fit** below the board. It explains posted trips to your
+pickup location, including readiness, deadline and carrying-space blockers. A
+compatible pickup alone does not guarantee a reciprocal circle. Only correct
+posted times or sizes when they match actual plans.

@@ -83,11 +83,11 @@ function renderBoard(){
   const setup=setupSteps();
   return `${intro('Going anyway?', 'Turn your next trip into a little help for someone nearby.')}
     <div class="layout"><section aria-label="Community board">${setup}${candidate||active||!setup?feature(candidate,active):''}
-      <div class="section-top"><h2>Around your group</h2><span>${state.members.length} ${live?'members':'demo neighbours'}</span></div>
+      <div class="section-top"><h2>Around your group</h2><span>${state.members.length} ${live?(state.members.length===1?'member':'members'):'demo neighbours'}</span></div>
       <div class="filters"><div class="tabs" role="tablist" aria-label="Board posts"><button class="tab ${boardTab==='trips'?'active':''}" role="tab" aria-selected="${boardTab==='trips'}" data-tab="trips">Heading out <span>${state.trips.filter(t=>t.status==='open').length}</span></button><button class="tab ${boardTab==='requests'?'active':''}" role="tab" aria-selected="${boardTab==='requests'}" data-tab="requests">Need a hand <span>${state.requests.filter(r=>r.status==='open').length}</span></button></div>
       <select class="filter-select" id="place-filter" aria-label="Filter by destination"><option value="all">Everywhere nearby</option>${state.places.map(p=>`<option value="${esc(p.id)}" ${destination===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
       <div class="cards" role="tabpanel">${open.length?open.map(card).join(''):`<div class="empty"><h3>No open ${boardTab==='trips'?'trips':'requests'} here yet.</h3><p>Try another destination, or add your own post.</p><button class="button" data-action="add-${boardTab==='trips'?'trip':'request'}">${icon('plus')}Add a post</button></div>`}</div>
-      ${reason?`<div class="match-reasons">${icon('info',17)}<span><strong>Still looking for your circle.</strong> ${esc(reason.reason)}</span></div>`:''}
+      ${reason?`<div class="match-reasons">${icon('info',17)}<span><strong>Still looking for your circle.</strong> ${esc(reason.reason)} <button class="subtle-link" data-action="match-help">See what needs to fit ↗</button></span></div>`:''}
     </section><aside class="side-column" aria-label="Your posts and group summary">${pocket()}${progressCard()}
       <div class="side-card community-card"><div class="eyebrow">A little goes a long way</div><div class="avatars">${state.members.slice(1,5).map(m=>avatar(m.id)).join('')}</div><div class="community-number">${state.matching.potentialTripsAvoided}</div><p>extra pickup trips could be avoided with the suggested circles.</p><small>Assumes one separate pickup trip per request. This is an estimate, not a measured saving.</small></div>
       <div class="quiet-note"><strong>${icon('loop',16)} A favour comes full circle.</strong>You help one neighbour. Another helps you. Everyone says yes before anyone sets off.<br><button class="subtle-link" data-action="guide">See how it works ↗</button></div>
@@ -152,6 +152,15 @@ function openModal(title, eyebrow, body, kind, id, focus=true){
 }
 function closeModal(){dialogState=null;modal.close();if(lastFocus?.isConnected)lastFocus.focus();}
 function edgesHTML(c, progress=false){return c.edges.map(e=>`<div class="exchange-edge"><div class="edge-people">${avatar(e.giver)}<strong>${esc(name(e.giver))}</strong><span class="edge-arrow">collects for →</span>${avatar(e.receiver)}<strong>${esc(name(e.receiver))}</strong></div><h3>${esc(e.item)}</h3><p>${esc(place(e.destination).name)} · Return by ${time(e.returns)} · Needed by ${time(e.deadline)}</p>${progress?`<div class="edge-status">${e.received?`${icon('check',14)} Received and confirmed`:e.collected?'Collected · waiting for receiver confirmation':'Awaiting collection'}</div>${['active','needs_handoff'].includes(c.status)?`<div class="actions">${e.giver===actor&&!e.collected?`<button class="button small" data-mutation data-action="collected" data-id="${c.id}" data-request="${e.request}">I’ve collected this</button>`:''}${e.receiver===actor&&e.collected&&!e.received?`<button class="button small primary" data-mutation data-action="received" data-id="${c.id}" data-request="${e.request}">I’ve received this</button>`:''}</div>`:''}`:''}</div>`).join('');}
+function showMatchHelp(){
+  const reason=state.matching.unmatched.find(x=>x.member===actor);
+  if(!reason){notify('Your matching status changed. Review the board.');return;}
+  const request=state.requests.find(r=>r.id===reason.request);
+  openModal('What is missing from your circle?','Matching explained',
+    `<p>${esc(reason.reason)}</p><div class="callout guide-sub">Your pickup: <strong>${esc(request.item)}</strong> at ${esc(place(request.destination).name)}. Ready ${time(request.ready)}, needed by ${time(request.deadline)}.</div>
+    ${(reason.checks||[]).map(check=>`<article class="proof-row"><h3>${esc(name(check.member))}’s planned trip</h3>${check.pickupFits?'<p>Pickup timing and space fit. Both people still need a reciprocal circle and everyone’s consent.</p>':`<ul>${check.blockers.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`}</article>`).join('')}
+    <p class="guide-sub">Only change a time or item size if your actual plans allow it. Open posts can be removed and reposted from Your pocket. Matching never changes your commitments automatically.</p><button class="button primary" data-action="close">Back to my board</button>`, 'match-help');
+}
 function showMatch(id){
   const c=state.matching.candidates.find(c=>c.id===id);if(!c){notify('This suggestion changed. Please refresh the board.');return;}
   openModal('A little help, all the way round.',`${c.members.length} neighbours · One exchange`,
@@ -205,6 +214,7 @@ document.addEventListener('click', async event=>{
   else if(action==='add-trip')showForm('trip');
   else if(action==='add-request')showForm('request');
   else if(action==='match')showMatch(id);
+  else if(action==='match-help')showMatchHelp();
   else if(action==='loop')showLoop(id);
   else if(action==='post')showPost(id);
   else if(action==='propose'){

@@ -82,6 +82,10 @@ function submit(window,id,fields){
   }
   const now=Math.floor(Date.now()/1000);
   await action(alice,'request',{destination:board.places[1].id,item:'Library reservation',ready:now,deadline:now+7200,units:1});
+  const help=await page(alice,'app.js');
+  help.document.querySelector('[data-action="match-help"]').click();
+  assert.match(help.document.querySelector('#modal').textContent,/Nobody else has posted/);
+  assert.match(help.document.querySelector('#modal').textContent,/Only change a time/);
   await action(bob,'trip',{destination:board.places[1].id,depart:now+1800,returns:now+3600,capacity:2});
   await action(bob,'request',{destination:board.places[0].id,item:'Prepared shop order',ready:now,deadline:now+7200,units:1});
   const review=await page(alice,'app.js');

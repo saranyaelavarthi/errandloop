@@ -82,11 +82,30 @@ def find_matches(state, now):
     for m, r in requests.items():
         if m in covered:
             continue
-        possible = any(compatible(t, r, now) for t in trips.values())
-        reason = ('Add a planned trip to offer something in return.' if m not in trips else
+        alternatives = any(m in c['members'] for c in candidates)
+        same_stop = [t for t in trips.values() if t['member'] != m
+                     and t['destination'] == r['destination']]
+        possible = any(compatible(t, r, now) for t in same_stop)
+        reason = ('A valid circle is available as an alternative. Review it in My circles.' if alternatives else
+                  'Add a planned trip to offer something in return.' if m not in trips else
                   'A compatible pickup exists, but a complete exchange circle is still missing.' if possible else
-                  'No open trip fits this destination, deadline, and carrying limit yet.')
-        unmatched.append({'member': m, 'request': r['id'], 'reason': reason})
+                  'Nobody else has posted an upcoming trip to your pickup location.' if not same_stop else
+                  'Trips reach your pickup location, but their timing or carrying space does not fit yet.')
+        checks = []
+        for t in sorted(same_stop, key=lambda t: (t['returns'], t['id'])):
+            blockers = []
+            if r['ready'] > t['depart']:
+                minutes = (r['ready'] - t['depart'] + 59) // 60
+                blockers.append(f'Leaves {minutes} min before your item is ready.')
+            if t['returns'] > r['deadline']:
+                minutes = (t['returns'] - r['deadline'] + 59) // 60
+                blockers.append(f'Returns {minutes} min after your deadline.')
+            if t['capacity'] < r['units']:
+                blockers.append(f"Available space: {t['capacity']}; your request needs {r['units']}.")
+            checks.append({'member': t['member'], 'trip': t['id'], 'blockers': blockers,
+                           'pickupFits': not blockers})
+        unmatched.append({'member': m, 'request': r['id'], 'reason': reason,
+                          'checks': checks})
     return {'candidates': candidates, 'unmatched': unmatched,
             'potentialTripsAvoided': served,
             'candidateCount': len(candidates), 'recommendedCount': len(chosen)}
