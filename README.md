@@ -133,3 +133,5 @@ References: [Cedar](https://github.com/cedar-policy/cedar),
 See [the submission writeup and 2:45 recording plan](docs/SUBMISSION.md).
 Circle reviews explain each pickup’s readiness, capacity and deadline margin.
 The board separates receiver-confirmed handovers from estimated opportunities.
+
+For the strongest demonstration, use the [three-person walkthrough](docs/DEMO-THREE-PEOPLE.md): no pair swap fits, but a reciprocal circle does. The first-use checklist helps new members post both sides of an exchange; each active circle explains the signed-in member’s next step.

@@ -1,3 +1,11 @@
+## Three-account workflow update
+
+The DOM/HTTP integration test now additionally verifies a three-person circle with
+no compatible pair swap, the explanation shown in the interface, separate-account
+consent, cancellation after collection, zero replacement matches, and completion
+of the preserved handovers. It also checks the first-use checklist and personal
+next-step message. This is simulated testing, not a real-user study or visual QA.
+
 # Current live-group validation
 
 - **50 Python tests pass**, including independent-account exchanges, actor-header

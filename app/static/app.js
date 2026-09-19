@@ -81,7 +81,7 @@ function renderBoard(){
   const open=state[boardTab].filter(x=>x.status==='open'&&(destination==='all'||x.destination===destination));
   const reason=state.matching.unmatched.find(x=>x.member===actor);
   return `${intro('Going anyway?', 'Turn your next trip into a little help for someone nearby.')}
-    <div class="layout"><section aria-label="Community board">${feature(candidate,active)}
+    <div class="layout"><section aria-label="Community board">${setupSteps()}${feature(candidate,active)}
       <div class="section-top"><h2>Around your group</h2><span>${state.members.length} ${live?'members':'demo neighbours'}</span></div>
       <div class="filters"><div class="tabs" role="tablist" aria-label="Board posts"><button class="tab ${boardTab==='trips'?'active':''}" role="tab" aria-selected="${boardTab==='trips'}" data-tab="trips">Heading out <span>${state.trips.filter(t=>t.status==='open').length}</span></button><button class="tab ${boardTab==='requests'?'active':''}" role="tab" aria-selected="${boardTab==='requests'}" data-tab="requests">Need a hand <span>${state.requests.filter(r=>r.status==='open').length}</span></button></div>
       <select class="filter-select" id="place-filter" aria-label="Filter by destination"><option value="all">Everywhere nearby</option>${state.places.map(p=>`<option value="${esc(p.id)}" ${destination===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
@@ -92,12 +92,19 @@ function renderBoard(){
       <div class="quiet-note"><strong>${icon('loop',16)} A favour comes full circle.</strong>You help one neighbour. Another helps you. Everyone says yes before anyone sets off.<br><button class="subtle-link" data-action="guide">See how it works ↗</button></div>
     </aside></div>`;
 }
+function setupSteps(){
+  const ownTrip=state.trips.some(t=>t.member===actor&&['open','reserved','active'].includes(t.status));
+  const ownRequest=state.requests.some(r=>r.member===actor&&['open','reserved','active'].includes(r.status));
+  if(!live||state.loops.some(l=>l.members.includes(actor))||(ownTrip&&ownRequest&&state.members.length>1))return '';
+  const steps=[{done:state.members.length>1,label:'Invite a neighbour',action:'group',detail:'Use Your group to share the invitation code.'},{done:ownTrip,label:'Post your planned trip',action:'add-trip',detail:'Where are you already going?'},{done:ownRequest,label:'Ask for a pickup',action:'add-request',detail:'What do you need from another stop?'}];
+  return `<section class="setup-steps" aria-label="Your first circle"><div class="eyebrow">Your first circle</div><h2>Give a hand. Get a hand.</h2><p>Each participant needs both a trip and a request. Start with these three steps.</p><div class="setup-grid">${steps.map((step,i)=>`<div class="setup-step ${step.done?'done':''}"><span aria-hidden="true">${step.done?'✓':i+1}</span><strong>${step.label}${step.done?' — done':''}</strong><p>${step.detail}</p>${step.done?'':`<button class="button small" data-action="${step.action}">${step.label}</button>`}</div>`).join('')}</div></section>`;
+}
 function progressCard(){
   const pending=state.loops.filter(l=>['awaiting','active','needs_handoff'].includes(l.status)).length;
   return `<div class="side-card"><div class="eyebrow">Promises into pickups</div><h3>What actually happened</h3><div class="progress-counts"><div><strong>${state.metrics.handovers}</strong><span>receiver-confirmed handovers</span></div><div><strong>${state.metrics.completed}</strong><span>completed circles</span></div></div><p class="guide-sub">${pending} circles in progress. Confirmations are reported by members; they do not measure distance, money, or emissions saved.</p><button class="subtle-link" data-view="activity">See the activity record ↗</button></div>`;
 }
 function matchProof(c){
-  return `<section class="match-proof" aria-label="Why this circle fits"><div class="eyebrow">Why this circle fits</div><h3>Every promise has a place.</h3><p>Each member collects once and receives once. These checks use the times and places your group posted.</p>${c.edges.map(e=>{
+  return `<section class="match-proof" aria-label="Why this circle fits"><div class="eyebrow">Why this circle fits</div><h3>Every promise has a place.</h3>${c.members.length>2&&!state.matching.candidates.some(other=>other.members.length===2&&other.members.every(m=>c.members.includes(m)))?'<div class="callout">A pair swap cannot do this. No two people in this circle have compatible two-way pickups; helping around the circle makes the exchange possible.</div>':''}<p>Each member collects once and receives once. These checks use the times and places your group posted.</p>${c.edges.map(e=>{
     const t=state.trips.find(t=>t.id===e.trip),r=state.requests.find(r=>r.id===e.request);
     const margin=Math.floor((e.deadline-e.returns)/60);
     return `<article class="proof-row"><strong>${esc(name(e.giver))} → ${esc(name(e.receiver))}</strong><dl><div><dt>Existing stop</dt><dd>${esc(place(e.destination).name)}</dd></div><div><dt>Pickup ready</dt><dd>${time(r.ready)} · before departure at ${time(e.depart)}</dd></div><div><dt>Carrying space</dt><dd>${e.units} of ${t.capacity} spaces needed</dd></div><div><dt>Deadline margin</dt><dd>${margin} min between planned return and deadline</dd></div></dl></article>`;
@@ -151,10 +158,11 @@ function showMatch(id){
 }
 function showLoop(id,focus=true){
   const l=state.loops.find(l=>l.id===id);if(!l){closeModal();return;}
-  const next=l.members.find(m=>!l.accepted.includes(m));
+  const myPickup=l.edges.find(e=>e.giver===actor), myReceipt=l.edges.find(e=>e.receiver===actor);
+  const nextStep=l.status==='awaiting'?(!l.accepted.includes(actor)?'Review your part and accept only if you can make the trip.':'Wait for every neighbour to accept before collecting.'):['active','needs_handoff'].includes(l.status)?(!myPickup.collected?'Your next step: collect '+myPickup.item+' for '+name(myPickup.receiver)+'.':myReceipt.collected&&!myReceipt.received?'Your next step: confirm receipt only after you have your item.':!myReceipt.collected?'Your pickup is recorded. Wait for your neighbour to collect your item.':'Your part is recorded. Other handovers are still pending.'):'';
   openModal('Your circle, one step at a time.',statusNames[l.status],
     `${l.status==='needs_handoff'?'<div class="callout warning">Someone reported a problem after collection. Items already collected must still be handed over. Contact your group; these posts will not be rematched automatically.</div>':''}
-    <div class="acceptance">${l.members.map(m=>`<span class="${l.accepted.includes(m)?'yes':''}">${l.accepted.includes(m)?'✓':'○'} ${esc(name(m))}</span>`).join('')}</div>${edgesHTML(l,true)}
+    <div class="acceptance">${l.members.map(m=>`<span class="${l.accepted.includes(m)?'yes':''}">${l.accepted.includes(m)?'✓':'○'} ${esc(name(m))}</span>`).join('')}</div>${nextStep?`<div class="callout next-step" role="status">${esc(nextStep)}</div>`:''}${edgesHTML(l,true)}
     ${l.status==='awaiting'?`<div class="actions">${!l.accepted.includes(actor)?`<button class="button primary" data-mutation data-action="accept" data-id="${id}">Yes, I’m in ${icon('check')}</button><button class="button" data-mutation data-action="decline" data-id="${id}">Decline</button>`:'<p class="guide-sub">You’ve accepted. Waiting for the others.</p>'}</div><p class="guide-sub">Everyone must accept before ${time(l.expires)}.</p>`:''}
     ${['awaiting','active'].includes(l.status)?`<button class="subtle-link" data-action="cancel-loop-prompt" data-id="${id}">I can’t make this trip</button>`:''}
     ${l.status==='completed'?'<div class="callout">Every receiver confirmed their item. This circle is complete. Thanks for helping it happen.</div>':''}

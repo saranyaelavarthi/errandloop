@@ -62,6 +62,7 @@ function submit(window,id,fields){
   assert.match(app.document.body.textContent,/Alice Test/);
   assert.match(app.document.body.textContent,/Maple House/);
   assert(!app.document.body.textContent.includes('Sana'));
+  assert.match(app.document.querySelector('.setup-steps').textContent,/Post your planned trip/);
   app.document.querySelector('[data-action="add-trip"]').click();
   submit(app,'#post-form',{destination:board.places[0].id,note:'Real user-created trip'});
   await poll(()=>app.document.body.textContent.includes('Real user-created trip'));
@@ -107,8 +108,58 @@ function submit(window,id,fields){
   assert.match(final.document.querySelector('.progress-counts').textContent,/2receiver-confirmed handovers1completed circles/);
   final.document.querySelector('[data-action="guide"]').click();
   assert.match(final.document.querySelector('#modal').textContent,/Post both sides/);
+  // A three-person exchange where there is no compatible two-person swap.
+  const cara=client();const joinPage=await page(cara,'onboarding.js');
+  joinPage.document.querySelector('[data-mode="join"]').click();
+  submit(joinPage,'#account-form',{name:'Cara Test',username:'cara',password:'test-password-for-cara',group_code:board.group.id});
+  await poll(()=>Boolean(cara.cookie));
+  board=await (await alice.request('/api/board')).json();
+  const places=board.places.map(p=>p.id);
+  for(const [who,going,need,item] of [[alice,places[0],places[1],'Reserved book'],[bob,places[1],places[2],'Print envelope'],[cara,places[2],places[0],'Prepared order']]){
+    await action(who,'trip',{destination:going,depart:now+1800,returns:now+3600,capacity:1});
+    await action(who,'request',{destination:need,item,ready:now,deadline:now+7200,units:1});
+  }
+  board=await (await alice.request('/api/board')).json();
+  assert.equal(board.matching.candidates.length,1);
+  assert.equal(board.matching.candidates[0].members.length,3);
+  const three=await page(alice,'app.js');three.document.querySelector('[data-action="match"]').click();
+  assert.match(three.document.querySelector('.match-proof').textContent,/A pair swap cannot do this/);
+  assert.equal(three.document.querySelectorAll('.proof-row').length,3);
+  three.document.querySelector('[data-action="propose"]').click();
+  await poll(()=>Boolean(three.document.querySelector('[data-action="cancel-loop-prompt"]')));
+  for(const who of [bob,cara]){
+    const w=await page(who,'app.js');w.document.querySelector('[data-action="loop"]').click();
+    w.document.querySelector('[data-action="accept"]').click();
+    await poll(()=>!w.document.querySelector('[data-action="accept"]'));
+  }
+  const start=await page(alice,'app.js');start.document.querySelector('[data-action="loop"]').click();
+  assert.match(start.document.querySelector('.next-step').textContent,/Your next step: collect/);
+  start.document.querySelector('[data-action="collected"]').click();
+  await poll(()=>!start.document.querySelector('[data-action="collected"]'));
+  // Plans change after goods are collected: preserve custody, do not rematch.
+  const cancel=await page(bob,'app.js');cancel.document.querySelector('[data-action="loop"]').click();
+  cancel.document.querySelector('[data-action="cancel-loop-prompt"]').click();
+  cancel.document.querySelector('[data-action="cancel-loop"]').click();
+  await poll(()=>cancel.document.body.textContent.includes('Let’s finish'));
+  board=await (await alice.request('/api/board')).json();
+  assert.equal(board.loops[0].status,'needs_handoff');
+  assert.equal(board.matching.candidates.length,0);
+  for(const who of [bob,cara]){
+    const w=await page(who,'app.js');w.document.querySelector('[data-action="loop"]').click();
+    assert.match(w.document.querySelector('#modal').textContent,/Someone reported a problem/);
+    w.document.querySelector('[data-action="collected"]').click();
+    await poll(()=>!w.document.querySelector('[data-action="collected"]'));
+  }
+  for(const who of [alice,bob,cara]){
+    const w=await page(who,'app.js');w.document.querySelector('[data-action="loop"]').click();
+    assert.equal(w.document.querySelectorAll('[data-action="received"]').length,1);
+    w.document.querySelector('[data-action="received"]').click();
+    await poll(()=>!w.document.querySelector('[data-action="received"]'));
+  }
+  const complete=await page(alice,'app.js');
+  assert.match(complete.document.querySelector('.progress-counts').textContent,/5receiver-confirmed handovers2completed circles/);
   assert.deepEqual(errors,[]);
-  console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location, match explanation, mutual consent, collection, recipient-only receipt, completed metrics and live guide.');
+  console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location, match explanation, mutual consent, collection, recipient-only receipt, completed metrics, live guide, first-use checklist, three-person-only circle, cancellation after pickup, preserved handovers and recovery to completion.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{
   windows.forEach(w=>w.close());server.kill();fs.rmSync(temp,{recursive:true,force:true});
 });

@@ -44,36 +44,12 @@ writing. Dependencies and their licences remain attributed in the repository.
 - Submit repository, video and writeup through the event form before its deadline.
 - Record a local Build It entry if AWS deployment is unavailable.
 
-## Recording plan: aim for 2 minutes 45 seconds
+## Recording plan
 
-Prepare two accounts in separate browser profiles in the SAME local server.
-Use a test group, clearly described as a demonstration. Create two places: Print
-shop and Library. A goes to Print shop and needs a library pickup. B goes to
-Library and needs a print pickup. Leave 30 minutes from now, return after 60,
-and set requests ready now and needed after 120. One item space each.
-
-0:00–0:20 — Show the problem and the two planned trips.
-Say: “We already make these trips. Can we help each other without making another
-pickup journey? ErrandLoop finds reciprocal circles inside a trusted group.”
-
-0:20–0:55 — Show the two signed-in accounts and their posted requests. Open the
-suggested circle and its explanation: actual stop, ready time, space and deadline
-margin. Say that handover travel and delays are not verified.
-
-0:55–1:25 — Propose as A. Show that collection is unavailable until B accepts.
-Switch browser windows and accept as B. Explain that the two accounts are separate.
-
-1:25–1:55 — Mark both pickups collected from their respective accounts. Show
-that each person can confirm only the item they receive. Complete both handovers.
-Reload and show two confirmations and one completed circle.
-
-1:55–2:20 — Show app/policies.cedar
-and app/auth.py, then the passing authorization test output. Explain: “Cedar
-checks ownership and group membership on the server, not just hidden buttons.”
-
-2:20–2:45 — State limits and next validation: “This is a tested prototype for
-small trusted groups. The next step is observing real collections with willing
-users. We count member-confirmed handovers, not invented carbon savings.”
+Use [the three-person recording guide](DEMO-THREE-PEOPLE.md). It demonstrates a
+circle that cannot be replaced by any compatible two-person swap, then consent,
+collection and recipient confirmation across three separate accounts. Aim for
+2 minutes 45 seconds. It also includes an optional cancellation-after-pickup take.
 
 ## Quick user study, if time permits
 
