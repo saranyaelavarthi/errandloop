@@ -3,7 +3,26 @@
 This is a scripted demonstration, not evidence of real deliveries or user research.
 Use the current real-account application, not the identity-switching sample mode.
 
-## Prepare the recording
+## One-command rehearsal
+
+From the repository folder run:
+
+```sh
+python scripts/run_local.py --rehearsal
+```
+
+The app opens at http://localhost:8001. The terminal prints a group code and
+fresh passwords for **asha**, **ravi**, and **meena**. Choose **Sign in**, using
+that group code and one account in each of three separate browser profiles.
+The three compatible trips and requests are already posted. Consent, collection
+and receipt still require each participant's actions through the real app.
+
+This mode uses a temporary database, clearly labels simulated pickups, and starts
+with zero handovers. It does not change your saved group. Stop with Ctrl+C;
+restarting creates a new group and fresh times. Keep the terminal passwords out
+of the recording. Return to your saved app with `python scripts/run_local.py`.
+
+## Optional manual preparation
 
 Run the local app. Create one test group with Print shop, Library and Grocery as
 pickup locations and Reception as the handover point. Use three separate browser

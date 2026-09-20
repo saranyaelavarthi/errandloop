@@ -110,6 +110,8 @@ function submit(window,id,fields){
     await poll(()=>!w.document.querySelector('[data-action="received"]'));
   }
   const final=await page(alice,'app.js');
+  assert.match(final.document.querySelector('.feature').textContent,/You closed the circle/);
+  assert.match(final.document.querySelector('.feature').textContent,/View completed exchange/);
   assert.match(final.document.querySelector('.progress-counts').textContent,/2receiver-confirmed handovers1completed circles/);
   final.document.querySelector('[data-action="guide"]').click();
   assert.match(final.document.querySelector('#modal').textContent,/Post both sides/);

@@ -8,6 +8,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlsplit
 import time
 import threading
+import tempfile
 import webbrowser
 from .store import get_store
 from .http_api import handle, SECURITY_HEADERS
@@ -23,13 +24,25 @@ def main():
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--open', action='store_true', help='Open the app in your default browser')
     parser.add_argument('--demo', action='store_true', help='Use the fictional sample board')
+    parser.add_argument('--rehearsal', action='store_true', help='Temporary three-account test group; no changes to real groups')
     args = parser.parse_args()
+    if args.rehearsal and args.demo:
+        parser.error('Choose either --rehearsal or --demo.')
+    rehearsal_dir = None
+    if args.rehearsal and args.port == 8000:
+        args.port = 8001
     if args.demo:
         store = get_store()
     else:
         from .groups import LocalGroups
         from .live import dispatch
-        store = LocalGroups(os.environ.get('ERRANDLOOP_LIVE_DB', 'errandloop-groups.sqlite3'))
+        if args.rehearsal:
+            from .rehearsal import prepare
+            rehearsal_dir = tempfile.TemporaryDirectory(prefix='errandloop-rehearsal-')
+            store = LocalGroups(Path(rehearsal_dir.name) / 'rehearsal.sqlite3')
+            group_code, accounts = prepare(store)
+        else:
+            store = LocalGroups(os.environ.get('ERRANDLOOP_LIVE_DB', 'errandloop-groups.sqlite3'))
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, payload, content_type='application/json; charset=utf-8'):
@@ -50,6 +63,8 @@ def main():
                     self.send(413, {'error': 'Request is too large.'}); return
                 raw = self.rfile.read(size).decode() if method == 'POST' else ''
                 result = dispatch(store, store.key, method, urlsplit(self.path).path, dict(self.headers), raw, 'http://' + self.headers.get('Host', ''), secure=False)
+                if args.rehearsal and result['headers'].get('Content-Type', '').startswith('text/html'):
+                    result['body'] = result['body'].replace('<body>', '<body><div class="demo-strip">REHEARSAL: simulated pickups. Temporary test accounts; real groups are unchanged.</div>').replace('<body data-mode="live">', '<body data-mode="live"><div class="demo-strip">REHEARSAL: simulated pickups. Temporary test accounts; real groups are unchanged.</div>')
                 body = result['body'].encode()
                 self.send_response(result['statusCode'])
                 for key, value in result['headers'].items(): self.send_header(key, value)
@@ -106,11 +121,25 @@ def main():
         parser.exit(1, f'Cannot start on {args.host}:{args.port}: {error}\n'
                     'If another ErrandLoop window is running, stop it with Ctrl+C.\n'
                     'Or choose another port: python scripts/run_local.py --port 8001\n')
-    print(f'ErrandLoop is running at http://{args.host}:{args.port}', flush=True)
-    print(('Fictional sample board.' if args.demo else 'Create a group or sign in. Your data is saved locally.') + ' Press Ctrl+C to stop.', flush=True)
+    browser_host = 'localhost' if args.rehearsal and args.host == '127.0.0.1' else args.host
+    print(f'ErrandLoop is running at http://{browser_host}:{args.port}', flush=True)
+    print(('Temporary rehearsal group.' if args.rehearsal else 'Fictional sample board.' if args.demo else 'Create a group or sign in. Your data is saved locally.') + ' Press Ctrl+C to stop.', flush=True)
+    if args.rehearsal:
+        print('REHEARSAL ONLY: test accounts and simulated goods. Data is temporary.', flush=True)
+        print('Choose Sign in (not Join). Group code: ' + group_code, flush=True)
+        for account in accounts:
+            print('Test username: ' + account['username'] + ' | Test password: ' + account['password'], flush=True)
+        print('Use separate browser profiles for each account. Do not include passwords in your video.', flush=True)
     if args.open:
-        threading.Timer(0.5, lambda: webbrowser.open(f'http://127.0.0.1:{args.port}')).start()
-    server.serve_forever()
+        threading.Timer(0.5, lambda: webbrowser.open(f'http://{browser_host}:{args.port}')).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print('\nStopped. Real group data is preserved.')
+    finally:
+        server.server_close()
+        if rehearsal_dir:
+            rehearsal_dir.cleanup()
 
 
 if __name__ == '__main__':

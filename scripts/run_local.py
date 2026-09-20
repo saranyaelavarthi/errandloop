@@ -23,6 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description='Start ErrandLoop locally')
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--demo', action='store_true')
+    parser.add_argument('--rehearsal', action='store_true')
     args = parser.parse_args()
     if sys.version_info < (3, 10):
         raise RuntimeError('Install Python 3.12 or newer, then run start.bat again.')
@@ -40,6 +41,8 @@ def main():
     command = [str(PYTHON), '-m', 'app.server', '--open', '--port', str(args.port)]
     if args.demo:
         command.append('--demo')
+    if args.rehearsal:
+        command.append('--rehearsal')
     return subprocess.call(command, cwd=ROOT)
 
 
