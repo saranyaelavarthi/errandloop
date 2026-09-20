@@ -151,10 +151,16 @@ function renderLoops(){
 function renderActivity(){return `${intro('The little things add up.', 'A shared record of promises kept, changes made, and circles completed.',false)}<div class="actions"><button class="button small" data-action="export">Download activity record</button></div><div class="activity-list">${state.activity.length?state.activity.map(a=>`<article class="activity-row">${avatar(a.member)}<div><p><strong>${esc(a.member==='system'?'ErrandLoop':member(a.member).name)}</strong></p><small>${esc(a.message)}</small></div><time>${time(a.at)}</time></article>`).join(''):`<div class="empty"><h3>A fresh page.</h3><p>Propose a circle or add a post. Its progress will appear here.</p></div>`}</div>`;}
 function openModal(title, eyebrow, body, kind, id, focus=true){
   if(!modal.open)lastFocus=document.activeElement;
+  const focused=modal.contains(document.activeElement)?document.activeElement:null;
+  const focusAction=focused?.dataset.action, focusRequest=focused?.dataset.request;
   dialogState={kind,id};
   $('#modal-content').innerHTML=`<div class="modal-head"><div><div class="eyebrow">${eyebrow}</div><h2 id="dialog-title">${title}</h2></div><button class="close" data-action="close" aria-label="Close dialog">×</button></div><div class="modal-body">${body}</div>`;
   if(!modal.open)modal.showModal();
   else if(focus)$('#modal-content button')?.focus();
+  else if(focused){
+    const replacement=[...modal.querySelectorAll('[data-action]')].find(el=>el.dataset.action===focusAction&&el.dataset.request===focusRequest);
+    (replacement||$('#modal-content button'))?.focus();
+  }
 }
 function closeModal(){dialogState=null;modal.close();if(lastFocus?.isConnected)lastFocus.focus();}
 function edgesHTML(c, progress=false){return c.edges.map(e=>`<div class="exchange-edge"><div class="edge-people">${avatar(e.giver)}<strong>${esc(name(e.giver))}</strong><span class="edge-arrow">collects for →</span>${avatar(e.receiver)}<strong>${esc(name(e.receiver))}</strong></div><h3>${esc(e.item)}</h3><p>${esc(place(e.destination).name)} · Return by ${time(e.returns)} · Needed by ${time(e.deadline)}</p>${progress?`<div class="edge-status">${e.received?`${icon('check',14)} Received and confirmed`:e.collected?'Collected · waiting for receiver confirmation':'Awaiting collection'}</div>${['active','needs_handoff'].includes(c.status)?`<div class="actions">${e.giver===actor&&!e.collected?`<button class="button small" data-mutation data-action="collected" data-id="${c.id}" data-request="${e.request}">I’ve collected this</button>`:''}${e.receiver===actor&&e.collected&&!e.received?`<button class="button small primary" data-mutation data-action="received" data-id="${c.id}" data-request="${e.request}">I’ve received this</button>`:''}</div>`:''}`:''}</div>`).join('');}
@@ -257,6 +263,8 @@ document.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.target, type=form.dataset.type, data=Object.fromEntries(new FormData(form));
   for(const key of ['depart','returns','ready','deadline'])if(data[key])data[key]=Math.floor(new Date(data[key]).getTime()/1000);
   for(const key of ['units','capacity'])if(data[key])data[key]=Number(data[key]);
+  const invalid=type==='trip'&&data.returns<=data.depart?'Your return time must be after your departure.':type==='request'&&data.deadline<=data.ready?'Your pickup deadline must be after the item is ready.':'';
+  if(invalid){const box=$('#form-error');box.textContent=invalid;box.focus();return;}
   await act(type,data,{message:'Posted. We’re looking for a circle that fits.'});
 });
 modal.addEventListener('cancel',()=>{dialogState=null;});

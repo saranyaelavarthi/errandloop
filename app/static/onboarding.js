@@ -1,4 +1,5 @@
 let mode = 'create';
+let submitting = false;
 const form = document.querySelector('#account-form');
 const error = document.querySelector('#login-error');
 const button = document.querySelector('#account-submit');
@@ -24,7 +25,11 @@ if (invitation && /^[a-f0-9]{32}$/.test(invitation)) {
   window.history.replaceState(null, '', window.location.pathname);
 } else choose(mode);
 form.addEventListener('submit', async event => {
-  event.preventDefault(); button.disabled = true; error.textContent = '';
+  event.preventDefault();
+  if(submitting)return;
+  submitting=true; button.disabled=true; button.setAttribute('aria-busy','true');
+  document.querySelectorAll('[data-mode]').forEach(el=>el.disabled=true);
+  error.textContent='';
   const data = Object.fromEntries(new FormData(form));
   if (mode === 'create') data.places = data.places.split('\n').map(s=>s.trim()).filter(Boolean);
   try {
@@ -34,5 +39,5 @@ form.addEventListener('submit', async event => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Unable to continue. Please try again.');
     form.reset(); window.location.replace('/');
-  } catch (e) { error.textContent = e.name === 'TimeoutError' ? 'The server took too long to respond. Try signing in first: your account may already have been created.' : e.message; button.disabled = false; }
+  } catch (e) { error.textContent = e.name === 'TimeoutError' ? 'The server took too long to respond. Try signing in first: your account may already have been created.' : e.message; error.focus(); } finally { submitting=false; button.disabled=false; button.removeAttribute('aria-busy'); document.querySelectorAll('[data-mode]').forEach(el=>el.disabled=false); }
 });

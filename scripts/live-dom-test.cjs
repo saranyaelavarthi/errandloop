@@ -70,6 +70,13 @@ function submit(window,id,fields){
   assert.match(app.document.querySelector('.setup-count').textContent,/1 of 3 ready/);
   assert.equal(app.document.querySelector('.community-card'),null);
   app.document.querySelector('[data-action="add-trip"]').click();
+  const tripForm=app.document.querySelector('#post-form');
+  const validReturn=tripForm.elements.returns.value;
+  submit(app,'#post-form',{returns:tripForm.elements.depart.value,note:'Keep my note'});
+  assert.match(app.document.querySelector('#form-error').textContent,/after your departure/);
+  assert.equal(app.document.activeElement.id,'form-error');
+  assert.equal(tripForm.elements.note.value,'Keep my note');
+  tripForm.elements.returns.value=validReturn;
   submit(app,'#post-form',{destination:board.places[0].id,note:'Real user-created trip'});
   await poll(()=>app.document.body.textContent.includes('Real user-created trip'));
   const bobPage=await page(bob,'app.js');
@@ -179,6 +186,18 @@ function submit(window,id,fields){
   failed.dispatchEvent(new failed.Event('error'));
   assert.equal(failed.document.querySelector('#app .loading'),null);
   assert.match(failed.document.querySelector('#app').textContent,/The board could not start/);
+  // A returning participant can recover from a wrong password without losing their form.
+  const returning=client();const login=await page(returning,'onboarding.js');
+  login.document.querySelector('[data-mode="login"]').click();
+  submit(login,'#account-form',{group_code:board.group.id,username:'alice',password:'incorrect-password'});
+  await poll(()=>Boolean(login.document.querySelector('#login-error').textContent));
+  assert.equal(login.document.activeElement.id,'login-error');
+  assert.equal(login.document.querySelector('#account-form').elements.username.value,'alice');
+  assert.equal(login.document.querySelector('#account-submit').disabled,false);
+  submit(login,'#account-form',{password:'test-password-for-alice'});
+  await poll(()=>Boolean(returning.cookie));
+  const restored=await (await returning.request('/api/board')).json();
+  assert.equal(restored.metrics.completed,2);
   assert.deepEqual(errors,[]);
   console.log('PASS: real onboarding forms, separate accounts, empty board, shared user-created post, signed-in identity, group invitation, owner-added location, match explanation, mutual consent, collection, recipient-only receipt, completed metrics, live guide, first-use checklist, three-person-only circle, cancellation after pickup, preserved handovers and recovery to completion.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{
