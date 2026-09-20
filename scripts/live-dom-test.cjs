@@ -66,6 +66,9 @@ function submit(window,id,fields){
   assert.match(app.document.body.textContent,/Maple House/);
   assert(!app.document.body.textContent.includes('Sana'));
   assert.match(app.document.querySelector('.setup-steps').textContent,/Post your planned trip/);
+  assert.equal(app.document.querySelector('.setup-next button').dataset.action,'add-trip');
+  assert.match(app.document.querySelector('.setup-count').textContent,/1 of 3 ready/);
+  assert.equal(app.document.querySelector('.community-card'),null);
   app.document.querySelector('[data-action="add-trip"]').click();
   submit(app,'#post-form',{destination:board.places[0].id,note:'Real user-created trip'});
   await poll(()=>app.document.body.textContent.includes('Real user-created trip'));
@@ -145,6 +148,7 @@ function submit(window,id,fields){
   }
   const start=await page(alice,'app.js');start.document.querySelector('[data-action="loop"]').click();
   assert.match(start.document.querySelector('.next-step').textContent,/Your next step: collect/);
+  assert.match(start.document.querySelector('.exchange-journey [aria-current="step"]').textContent,/Collect/);
   start.document.querySelector('[data-action="collected"]').click();
   await poll(()=>!start.document.querySelector('[data-action="collected"]'));
   // Plans change after goods are collected: preserve custody, do not rematch.
