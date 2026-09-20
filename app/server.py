@@ -9,6 +9,8 @@ from urllib.parse import urlsplit, parse_qs
 import time
 import threading
 import tempfile
+import secrets
+import hmac
 import webbrowser
 from .store import get_store
 from .http_api import handle, SECURITY_HEADERS
@@ -43,6 +45,7 @@ def main():
             rehearsal_dir = tempfile.TemporaryDirectory(prefix='errandloop-rehearsal-')
             store = LocalGroups(Path(rehearsal_dir.name) / 'rehearsal.sqlite3')
             group_code, accounts = prepare(store)
+            rehearsal_token = secrets.token_urlsafe(32)
         else:
             store = LocalGroups(os.environ.get('ERRANDLOOP_LIVE_DB', 'errandloop-groups.sqlite3'))
 
@@ -72,8 +75,11 @@ def main():
                     if self.headers.get('Host', '').split(':')[0] not in ('localhost', '127.0.0.1'):
                         self.send(403, {'error': 'Use localhost for rehearsal.'}); return
                     switching = method == 'POST' and path == '/rehearsal/switch'
-                    if switching and self.headers.get('Origin') != origin:
-                        self.send(403, {'error': 'Open rehearsal on this computer.'}); return
+                    if switching:
+                        supplied_token = parse_qs(raw).get('token', [''])[0]
+                        request_origin = self.headers.get('Origin')
+                        if not hmac.compare_digest(supplied_token, rehearsal_token) or request_origin not in (None, 'null', origin):
+                            self.send(403, {'error': 'Rehearsal session changed. Open the home page and try again.'}); return
                     first_visit = method == 'GET' and path == '/' and dispatch(store, store.key, 'GET', '/api/board', headers, '', origin, secure=False)['statusCode'] == 401
                     if switching or first_visit:
                         username = parse_qs(raw).get('username', ['asha'])[0] if switching else 'asha'
@@ -97,6 +103,7 @@ def main():
                 if args.rehearsal and result['headers'].get('Content-Type', '').startswith('text/html'):
                     import re
                     result['body'] = re.sub(r'<div class="demo-strip">.*?</div>', '<div class="demo-strip"><span><strong>Rehearsal</strong> · Simulated pickups</span><form method="post" action="/rehearsal/switch" class="rehearsal-seats" aria-label="Choose test participant"><span>Continue as</span><button name="username" value="asha">Asha</button><button name="username" value="ravi">Ravi</button><button name="username" value="meena">Meena</button></form></div>', result['body'], count=1, flags=re.S)
+                    result['body'] = result['body'].replace('class="rehearsal-seats" aria-label="Choose test participant">', 'class="rehearsal-seats" aria-label="Choose test participant"><input type="hidden" name="token" value="' + rehearsal_token + '">')
                     if '/onboarding.js' in result['body']:
                         result['body'] = result['body'].replace('<form id="account-form">', '<div class="callout"><strong>Your three-person circle is ready.</strong><p>Choose Asha, Ravi or Meena in the banner above. No manual sign-in is needed.</p></div><form id="account-form">')
                 body = result['body'].encode()

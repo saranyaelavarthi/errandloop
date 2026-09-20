@@ -1,6 +1,7 @@
 """One cookie jar completes a rehearsal through the same public HTTP actions."""
 import http.cookiejar
 import json
+import re
 import pytest
 import urllib.error
 import socket
@@ -20,7 +21,7 @@ def test_one_window_rehearsal():
     client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     def call(path, data=None, form=False):
         raw = (urllib.parse.urlencode(data) if form else json.dumps(data)).encode() if data is not None else None
-        req = urllib.request.Request(base+path, data=raw, headers={'Origin': base, 'Content-Type': 'application/x-www-form-urlencoded' if form else 'application/json'})
+        req = urllib.request.Request(base+path, data=raw, headers={'Origin': 'null' if form else base, 'Content-Type': 'application/x-www-form-urlencoded' if form else 'application/json'})
         with client.open(req, timeout=10) as response:
             return response.read().decode()
     def board():
@@ -28,12 +29,13 @@ def test_one_window_rehearsal():
     def act(command, **fields):
         return call('/api/actions/'+command, {'version':board()['version'], 'operation':uuid.uuid4().hex, **fields})
     def switch(name):
-        call('/rehearsal/switch', {'username':name}, True)
+        call('/rehearsal/switch', {'username':name, 'token':token}, True)
     try:
         assert 'running at' in process.stdout.readline()
         html = call('/')
         assert html.count('class="demo-strip"') == 1
         assert '/rehearsal/switch' in html
+        token = re.search(r'name="token" value="([^"]+)"', html).group(1)
         blocked = urllib.request.Request(base+'/rehearsal/switch', data=b'username=ravi', headers={'Origin':'https://other.example'})
         with pytest.raises(urllib.error.HTTPError) as error:
             client.open(blocked)
