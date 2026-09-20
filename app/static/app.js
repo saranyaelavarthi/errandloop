@@ -124,10 +124,14 @@ function feature(c,active){
   return `<section class="feature"><div><div class="eyebrow">Good things start small</div><h2>One trip.<br>A chance to help.</h2><p>Post where you’re going and what you need. We’ll look for a circle that works for everyone.</p><button class="button lime" data-action="add-trip">Post your trip ${icon('arrow')}</button></div><div class="cycle-picture"><div class="cycle-person n0">${avatar(actor)}<strong>${esc(name(actor))}</strong><small>Your next small favour</small></div></div></section>`;
 }
 function cyclePicture(c){
-  const n=c.members.length;
-  const points=c.members.map((m,i)=>{const a=2*Math.PI*i/n;return {m,x:115+75*Math.sin(a),y:90-67*Math.cos(a)};});
-  const lines=points.map((p,i)=>{const q=points[(i+1)%n],dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy);return `<path d="M${p.x+dx/len*30},${p.y+dy/len*30} L${q.x-dx/len*35},${q.y-dy/len*35}"/>`;}).join('');
-  return `<div class="cycle-picture" role="img" aria-label="Exchange circle: ${esc(c.edges.map(e=>`${name(e.giver)} collects for ${name(e.receiver)}`).join('; '))}"><svg viewBox="0 0 230 220" aria-hidden="true"><defs><marker id="arrowhead" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6" fill="none" stroke="#b9d397" stroke-width="1.2"/></marker></defs><g fill="none" stroke="#92ad7d" stroke-width="1.3" stroke-dasharray="4 5" marker-end="url(#arrowhead)">${lines}</g></svg>${points.map(p=>`<div class="cycle-person" data-point="${p.m}">${avatar(p.m)}<strong>${esc(name(p.m))}</strong><small>${esc(place(c.edges.find(e=>e.giver===p.m).destination).name)}</small></div>`).join('')}<span class="cycle-center">full circle</span></div>`;
+  const ordered=[];
+  let giver=c.members.includes(actor)?actor:c.members[0];
+  for(let i=0;i<c.edges.length;i++){
+    const edge=c.edges.find(e=>e.giver===giver);
+    if(!edge||ordered.includes(edge))break;
+    ordered.push(edge);giver=edge.receiver;
+  }
+  return `<section class="exchange-map" aria-label="Who collects for whom"><div class="exchange-map-heading"><span>THE EXCHANGE</span><span>${c.members.length} neighbours · one circle</span></div><ol>${ordered.map((e,i)=>`<li><div class="map-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</div><div class="map-route"><div class="map-people"><strong>${esc(name(e.giver))}</strong><span class="map-arrow" aria-label="collects for">→</span><strong>${esc(name(e.receiver))}</strong></div><div class="map-location">${esc(place(e.destination).name)}</div><div class="map-item">${esc(e.item)}</div></div></li>`).join('')}</ol><div class="map-footer">${icon('loop',15)} Everyone gives a hand. Everyone gets one.</div></section>`;
 }
 // Keep dynamic diagram positioning in a stylesheet (no inline style attributes).
 function layoutCycle(){
