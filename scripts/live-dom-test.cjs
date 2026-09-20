@@ -27,11 +27,11 @@ function client(){
     return result;
   }};
 }
-async function page(client, script){
+async function page(client, script, fragment=""){
   const html=await (await client.request('/')).text();
   const virtualConsole=new VirtualConsole();
   virtualConsole.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message);});
-  const dom=new JSDOM(html,{url:base,runScripts:'outside-only',virtualConsole});
+  const dom=new JSDOM(html,{url:base+fragment,runScripts:'outside-only',virtualConsole});
   windows.push(dom.window);
   dom.window.fetch=client.request.bind(client);
   dom.window.AbortSignal=AbortSignal;
@@ -54,8 +54,10 @@ function submit(window,id,fields){
   await poll(()=>Boolean(alice.cookie));
   let board=await (await alice.request('/api/board')).json();
   assert.equal(board.members.length,1);assert.equal(board.trips.length,0);
-  const second=await page(bob,'onboarding.js');
-  second.document.querySelector('[data-mode="join"]').click();
+  const second=await page(bob,'onboarding.js','/#join='+board.group.id);
+  assert.equal(second.document.querySelector('[data-mode="join"]').getAttribute('aria-pressed'),'true');
+  assert.equal(second.document.querySelector('#account-form').elements.group_code.value,board.group.id);
+  assert.equal(second.location.hash,'');
   submit(second,'#account-form',{name:'Bob Test',username:'bob',password:'test-password-for-bob',group_code:board.group.id});
   await poll(()=>Boolean(bob.cookie));
   const app=await page(alice,'app.js');
@@ -72,6 +74,8 @@ function submit(window,id,fields){
   assert.match(bobPage.document.querySelector('#actor').textContent,/Bob Test/);
   app.document.querySelector('[data-action="group"]').click();
   assert.match(app.document.querySelector('#modal').textContent,new RegExp(board.group.id));
+  assert.equal(app.document.querySelector('[aria-label="Invitation link"]').value,base+'/#join='+board.group.id);
+  assert.match(app.document.querySelector('#modal').textContent,/works on this computer only/);
   submit(app,'#place-form',{name:'Actual print shop'});
   await poll(()=>app.document.querySelector('#modal').textContent.includes('Actual print shop'));
   // Exercise the actual circle controls with separate signed-in browser clients.

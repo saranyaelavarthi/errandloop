@@ -17,17 +17,22 @@ function choose(next) {
   error.textContent = '';
 }
 document.querySelectorAll('[data-mode]').forEach(el => el.addEventListener('click', () => choose(el.dataset.mode)));
-choose(mode);
+const invitation = new URLSearchParams(window.location.hash.slice(1)).get('join');
+if (invitation && /^[a-f0-9]{32}$/.test(invitation)) {
+  choose('join');
+  form.elements.group_code.value = invitation;
+  window.history.replaceState(null, '', window.location.pathname);
+} else choose(mode);
 form.addEventListener('submit', async event => {
   event.preventDefault(); button.disabled = true; error.textContent = '';
   const data = Object.fromEntries(new FormData(form));
   if (mode === 'create') data.places = data.places.split('\n').map(s=>s.trim()).filter(Boolean);
   try {
     const response = await fetch({create:'/api/groups/create',join:'/api/groups/join',login:'/api/session'}[mode], {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+      signal:AbortSignal.timeout(15000), method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Unable to continue. Please try again.');
     form.reset(); window.location.replace('/');
-  } catch (e) { error.textContent = e.message; button.disabled = false; }
+  } catch (e) { error.textContent = e.name === 'TimeoutError' ? 'The server took too long to respond. Try signing in first: your account may already have been created.' : e.message; button.disabled = false; }
 });

@@ -212,6 +212,7 @@ document.addEventListener('click', async event=>{
   if(action==='close')closeModal();
   else if(action==='guide')guide();
   else if(action==='group')showGroup();
+  else if(action==='copy-invite'){try{await navigator.clipboard.writeText(location.origin+'/#join='+encodeURIComponent(state.group.id));notify('Invitation link copied. Share privately with people you know.');}catch(e){notify('Select and copy the invitation link shown above.');}}
   else if(action==='copy-group'){try{await navigator.clipboard.writeText(state.group.id);notify('Group code copied. Share it privately with your neighbours.');}catch(e){notify('Select and copy the group code shown above.');}}
   else if(action==='refresh')await refresh(true);
   else if(action==='go-board'){currentView='board';render();}
@@ -265,6 +266,8 @@ function showGroup(){
   openModal(esc(state.group.name),'Your group',
     `<p>Invite people you know. Each person joins with this code and creates their own username and password.</p>
     <div class="callout"><strong>Group code</strong><p class="group-code">${esc(state.group.id)}</p><button class="button small" data-action="copy-group">Copy group code</button></div>
+    <label class="field">Invitation link<input readonly aria-label="Invitation link" value="${esc(location.origin+'/#join='+encodeURIComponent(state.group.id))}"></label><button class="button small" data-action="copy-invite">Copy invitation link</button>
+    ${['localhost','127.0.0.1','[::1]'].includes(location.hostname)?'<p class="guide-sub">This address works on this computer only. Use separate browser profiles here for a local trial. A public deployment is needed to invite people on other devices over the internet.</p>':''}
     <p><strong>Handover point:</strong> ${esc(state.group.meeting)}</p>
     <p>Post your actual trip and what you need collected. Matches appear when at least two members have compatible trips and requests. Each person must accept from their own account.</p>
     <h3>Pickup locations</h3><ul>${state.places.map(p=>`<li>${esc(p.name)}</li>`).join('')}</ul>
