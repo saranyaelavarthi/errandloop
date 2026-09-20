@@ -17,7 +17,7 @@ These are simulated participant checks, not independent human usability research
 - Recover the same completed records after signing in from a fresh session.
 - Present an actionable error when initial app loading fails.
 
-Result: **56 Python tests passed**, the HTTP/DOM integration scenario passed,
+Result: **57 Python tests passed**, the HTTP/DOM integration scenario passed,
 and JavaScript syntax and whitespace checks passed.
 
 ## Limits
@@ -31,7 +31,7 @@ real delivery impact, public AWS deployment or award outcome is claimed.
 
 1. Update with `git pull --ff-only`.
 2. Run `python scripts/run_local.py --rehearsal`.
-3. Use the printed test credentials in three separate browser profiles.
+3. The app opens as Asha. Use the banner to switch to Ravi and Meena in the same window.
 4. Follow `docs/DEMO-THREE-PEOPLE.md` for the demonstration. Keep it under three
    minutes if required by the submission form. Label the pickups as simulated.
 5. Show the matching explanation, each person's consent, collection and receipt,

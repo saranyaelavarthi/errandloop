@@ -11,11 +11,21 @@ From the repository folder run:
 python scripts/run_local.py --rehearsal
 ```
 
-The app opens at http://localhost:8001. The terminal prints a group code and
-fresh passwords for **asha**, **ravi**, and **meena**. Choose **Sign in**, using
-that group code and one account in each of three separate browser profiles.
-The three compatible trips and requests are already posted. Consent, collection
-and receipt still require each participant's actions through the real app.
+The app opens at http://localhost:8001 **already signed in as Asha**.
+Use **Asha / Ravi / Meena** in the top banner to change participants in the
+same window. No account creation, passwords or extra browsers are needed.
+The trips and requests are already posted.
+
+1. As Asha, review the suggested circle and propose it.
+2. Choose Ravi in the banner, open My circles, and accept.
+3. Choose Meena and accept. Everyone has now agreed.
+4. For each participant, open the circle and mark their item collected.
+5. For each participant, confirm receipt of their own item.
+6. Show the completed circle: three reported handovers, one completed exchange.
+
+All goods are simulated in rehearsal. The switcher is only available in the
+localhost rehearsal server and its temporary database. Normal sign-in remains
+unchanged. An automated HTTP test completes this exact one-session sequence.
 
 This mode uses a temporary database, clearly labels simulated pickups, and starts
 with zero handovers. It does not change your saved group. Stop with Ctrl+C;

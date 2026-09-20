@@ -34,3 +34,5 @@ main{padding-top:26px}.topbar{padding-top:18px;padding-bottom:18px}.page-intro{m
 
 /* First-use spacing refined from the submitted desktop screenshots. */
 .first-handover p{font-size:.9rem;line-height:1.65;color:var(--muted);margin:14px 0}.cards>.empty{padding:28px 24px;min-height:0}.cards>.empty .button{margin-top:16px}.setup-step>p{max-width:30ch}.page-intro{gap:22px}.setup-next{margin-top:16px}.demo-strip strong{font-weight:700}@media(min-width:1101px){.page-intro{margin-bottom:22px}.setup-steps{padding:20px}.setup-step{padding:12px}.setup-grid{margin-top:12px}}
+
+.rehearsal-seats{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.rehearsal-seats button{border:1px solid #91a894;border-radius:6px;padding:8px 12px;min-height:40px;color:white}.rehearsal-seats button:hover{background:#34574b}.rehearsal-seats span{font-size:.75rem}@media(max-width:600px){.demo-strip:has(.rehearsal-seats){flex-direction:column;align-items:flex-start;gap:8px}}
