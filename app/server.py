@@ -64,7 +64,10 @@ def main():
                 raw = self.rfile.read(size).decode() if method == 'POST' else ''
                 result = dispatch(store, store.key, method, urlsplit(self.path).path, dict(self.headers), raw, 'http://' + self.headers.get('Host', ''), secure=False)
                 if args.rehearsal and result['headers'].get('Content-Type', '').startswith('text/html'):
-                    result['body'] = result['body'].replace('<body>', '<body><div class="demo-strip">REHEARSAL: simulated pickups. Temporary test accounts; real groups are unchanged.</div>').replace('<body data-mode="live">', '<body data-mode="live"><div class="demo-strip">REHEARSAL: simulated pickups. Temporary test accounts; real groups are unchanged.</div>')
+                    import re
+                    result['body'] = re.sub(r'<div class="demo-strip">.*?</div>', '<div class="demo-strip"><span><strong>Rehearsal</strong> · Simulated pickups. Your saved groups are unchanged.</span></div>', result['body'], count=1, flags=re.S)
+                    if '/onboarding.js' in result['body']:
+                        result['body'] = result['body'].replace('<form id="account-form">', '<div class="callout"><strong>Your three-person circle is ready.</strong><p>Choose Sign in. Use asha, ravi or meena and the password printed in your terminal.</p></div><form id="account-form">')
                 body = result['body'].encode()
                 self.send_response(result['statusCode'])
                 for key, value in result['headers'].items(): self.send_header(key, value)
